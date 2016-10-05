@@ -48,96 +48,112 @@ CoolingSystem* CoolingSystem_new(SerialManager* serialMan)
 //-------------------------------------------------------------------
 void CoolingSystem_calculations(CoolingSystem* me, sbyte2 motorControllerTemp, sbyte2 motorTemp, sbyte1 batteryTemp)
 {
-    //Water pump ------------------
-    //Water pump PWM protocol unknown
-    if (motorControllerTemp >= me->waterPumpHigh || motorTemp >= me->waterPumpHigh)
+    //TCS Pot - 0-1000, >4000
+    me->motorFanState = FALSE;
+    me->batteryFanState = FALSE;
+    if (Sensor_TCSKnob.sensorValue > 600)
     {
-        me->waterPumpPercent = .9;
-    }
-    else if (motorControllerTemp < me->waterPumpLow && motorTemp < me->waterPumpLow)
-    {
-        me->waterPumpPercent = .2;
-    }
-    else
-    {
-        me->waterPumpPercent = .2 + .7 * getPercent(max(motorControllerTemp, motorTemp), me->waterPumpLow, me->waterPumpHigh, TRUE);
-    }
-
-    //ubyte1* tempMsg[25];
-    //sprintf(tempMsg, "Motor temp: %d\n", motorTemp);
-    //SerialManager_send(me->sm, tempMsg);
-
-    // START - RABEEL's CODE
-    /*******************************
-    sprintf(tempMsg, "MCM temp %d >= %d ? ", motorControllerTemp, me->motorFanHigh);
-    SerialManager_send(me->sm, tempMsg);
-    if ((motorControllerTemp >= me->motorFanHigh)) // || (motorTemp >= me->motorFanHigh))
-    {
-        SerialManager_send(me->sm, "Yes.\n");
-        me->motorFanState = TRUE;
-    }
-    else
-    {
-        SerialManager_send(me->sm, "No.\n");
-        me->motorFanState = FALSE;
-    }
-
-    sprintf(tempMsg, "Batt temp %d > %d ? ", batteryTemp, me->batteryFanHigh);
-    SerialManager_send(me->sm, tempMsg);
-    if ((batteryTemp >= me->batteryFanHigh))
-    {
-        SerialManager_send(me->sm, "Yes.\n");
         me->batteryFanState = TRUE;
     }
-    else
+    if (Sensor_TCSKnob.sensorValue > 800)
     {
-        SerialManager_send(me->sm, "No.\n");
-        me->batteryFanState = FALSE; 
+        me->batteryFanState = FALSE;
+        me->motorFanState = TRUE;
     }
 
-    // END - RABEEL's CODE
-    *******************************/
-    
+    me->waterPumpPercent = .15 + .75 * getPercent(Sensor_TCSKnob.sensorValue, 50, 550, TRUE);
 
 
-    //Motor fan / rad fan
-    if(me->motorFanState == FALSE)
-    {
-        if ((motorControllerTemp >= me->motorFanHigh) || (motorTemp >= me->motorFanHigh))
-        {
-            me->motorFanState = TRUE;
-            SerialManager_send(me->sm, "Turning motor fans on.\n");
-        }
-    }
-    else  //motor fan is on
-    {
-        if ((motorControllerTemp < me->motorFanLow) && (motorTemp < me->motorFanLow))
-            // Shouldn't this be an || instead of an &&
-        {
-            me->motorFanState = FALSE;
-            SerialManager_send(me->sm, "Turning motor fans off.\n");
-        }
-    }
+    ////////////Water pump ------------------
+    ////////////Water pump PWM protocol unknown
+    //////////if (motorControllerTemp >= me->waterPumpHigh || motorTemp >= me->waterPumpHigh)
+    //////////{
+    //////////    me->waterPumpPercent = .9;
+    //////////}
+    //////////else if (motorControllerTemp < me->waterPumpLow && motorTemp < me->waterPumpLow)
+    //////////{
+    //////////    me->waterPumpPercent = .2;
+    //////////}
+    //////////else
+    //////////{
+    //////////    me->waterPumpPercent = .2 + .7 * getPercent(max(motorControllerTemp, motorTemp), me->waterPumpLow, me->waterPumpHigh, TRUE);
+    //////////}
 
-    //Battery fans
-    if (me->batteryFanState == TRUE)
-    {
-        if (batteryTemp < me->batteryFanLow)
-        {
-            me->batteryFanState = FALSE;
-            SerialManager_send(me->sm, "Turning battery fans off.\n");
-        }
-    }
-    else //fans are off
-    {
-        if (batteryTemp >= me->batteryFanHigh)
-        {
-            me->batteryFanState = TRUE;
-            SerialManager_send(me->sm, "Turning battery fans on.\n");
-        }
-    }
+
+    ////////////Motor fan / rad fan
+    //////////if(me->motorFanState == FALSE)
+    //////////{
+    //////////    if ((motorControllerTemp >= me->motorFanHigh) || (motorTemp >= me->motorFanHigh))
+    //////////    {
+    //////////        me->motorFanState = TRUE;
+    //////////        SerialManager_send(me->sm, "Turning motor fans on.\n");
+    //////////    }
+    //////////}
+    //////////else  //motor fan is on
+    //////////{
+    //////////    if ((motorControllerTemp < me->motorFanLow) && (motorTemp < me->motorFanLow))
+    //////////        // Shouldn't this be an || instead of an &&
+    //////////    {
+    //////////        me->motorFanState = FALSE;
+    //////////        SerialManager_send(me->sm, "Turning motor fans off.\n");
+    //////////    }
+    //////////}
+
+    ////////////Battery fans
+    //////////if (me->batteryFanState == TRUE)
+    //////////{
+    //////////    if (batteryTemp < me->batteryFanLow)
+    //////////    {
+    //////////        me->batteryFanState = FALSE;
+    //////////        SerialManager_send(me->sm, "Turning battery fans off.\n");
+    //////////    }
+    //////////}
+    //////////else //fans are off
+    //////////{
+    //////////    if (batteryTemp >= me->batteryFanHigh)
+    //////////    {
+    //////////        me->batteryFanState = TRUE;
+    //////////        SerialManager_send(me->sm, "Turning battery fans on.\n");
+    //////////    }
+    //////////}
 
 }
+
+//ubyte1* tempMsg[25];
+//sprintf(tempMsg, "Motor temp: %d\n", motorTemp);
+//SerialManager_send(me->sm, tempMsg);
+
+// START - RABEEL's CODE
+/*******************************
+sprintf(tempMsg, "MCM temp %d >= %d ? ", motorControllerTemp, me->motorFanHigh);
+SerialManager_send(me->sm, tempMsg);
+if ((motorControllerTemp >= me->motorFanHigh)) // || (motorTemp >= me->motorFanHigh))
+{
+SerialManager_send(me->sm, "Yes.\n");
+me->motorFanState = TRUE;
+}
+else
+{
+SerialManager_send(me->sm, "No.\n");
+me->motorFanState = FALSE;
+}
+
+sprintf(tempMsg, "Batt temp %d > %d ? ", batteryTemp, me->batteryFanHigh);
+SerialManager_send(me->sm, tempMsg);
+if ((batteryTemp >= me->batteryFanHigh))
+{
+SerialManager_send(me->sm, "Yes.\n");
+me->batteryFanState = TRUE;
+}
+else
+{
+SerialManager_send(me->sm, "No.\n");
+me->batteryFanState = FALSE;
+}
+
+// END - RABEEL's CODE
+*******************************/
+
 
 
 //    // Turn on FANS
