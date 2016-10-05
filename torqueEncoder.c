@@ -21,9 +21,11 @@ TorqueEncoder* TorqueEncoder_new(bool benchMode)
     //me->bench = benchMode;
 	
     //TODO: Make sure the main loop is running before doing this
-    me->tps0 = (benchMode == TRUE) ? &Sensor_BenchTPS0 : &Sensor_TPS0;
-    me->tps1 = (benchMode == TRUE) ? &Sensor_BenchTPS1 : &Sensor_TPS1;
-	
+    //me->tps0 = (benchMode == TRUE) ? &Sensor_BenchTPS0 : &Sensor_TPS0;
+    //me->tps1 = (benchMode == TRUE) ? &Sensor_BenchTPS1 : &Sensor_TPS1;
+    me->tps0 = &Sensor_TPS0;
+    me->tps1 = &Sensor_TPS1;
+
 	//Where/should these be hardcoded?
 	me->tps0_reverse = FALSE;
 	me->tps1_reverse = TRUE;
@@ -32,7 +34,18 @@ TorqueEncoder* TorqueEncoder_new(bool benchMode)
     me->runCalibration = FALSE;  //Do not run the calibration at the next main loop cycle
 
     //me->calibrated = FALSE;
-    TorqueEncoder_resetCalibration(me);
+    //TorqueEncoder_resetCalibration(me);
+
+    //Default calibration values
+    me->tps0_calibMin = 1117;  //me->tps0->sensorValue;
+    me->tps0_calibMax = 2304;  //me->tps0->sensorValue;
+    me->tps1_calibMin = 2702;  //me->tps1->sensorValue;
+    me->tps1_calibMax = 3890;  //me->tps1->sensorValue;
+    //me->tps0_calibMin = 558;  //me->tps0->sensorValue;
+    //me->tps0_calibMax = 2649;  //me->tps0->sensorValue;
+    //me->tps1_calibMin = 2382;  //me->tps1->sensorValue;
+    //me->tps1_calibMax = 4441;  //me->tps1->sensorValue;
+    me->calibrated = TRUE;
 
     return me;
 }
@@ -54,7 +67,6 @@ void TorqueEncoder_update(TorqueEncoder* me)
 	}
 	else
 	{
-
 		//getPedalTravel = 0;
 
 		//-------------------------------------------------------------------
@@ -85,7 +97,6 @@ void TorqueEncoder_update(TorqueEncoder* me)
 			if (travel > range) { me->tps1_percent = 1; }
 			if (travel > me->tps1_calibMax) { me->tps1_percent = 0; }
 
-
 			//TorqueEncoder_plausibilityCheck(me, 0, &me->implausibility);
 			/*if (me->implausibility == TRUE)
 			{
@@ -96,24 +107,6 @@ void TorqueEncoder_update(TorqueEncoder* me)
 				me->percent = (me->tps0_percent + me->tps1_percent) / 2;
 			//}
 		}
-
-        if (me->percent <= 0)
-        {
-            Light_set(Light_dashTCS, 0);
-        }
-        else
-        {
-            if (me->percent > 0 && me->percent <= .25)
-            {
-                Light_set(Light_dashTCS, .5 * me->percent);
-            }
-            else
-            {
-                Light_set(Light_dashTCS, me->percent);
-            }
-        }
-
-
 	}
 }
 
@@ -124,15 +117,17 @@ void TorqueEncoder_resetCalibration(TorqueEncoder* me)
     //me->tps0_rawCalibMax = me->tps0->specMin;
     //me->tps0_calibMin = me->tps0->specMax;
 	//me->tps0_calibMax = me->tps0->specMin;
-	me->tps0_calibMin = me->tps0->sensorValue;
-	me->tps0_calibMax = me->tps0->sensorValue;
-
+    
     //me->tps1_rawCalibMin = me->tps1->specMax;
     //me->tps1_rawCalibMax = me->tps1->specMin;
 	//me->tps1_calibMin = me->tps1->specMax;
 	//me->tps1_calibMax = me->tps1->specMin;
-	me->tps1_calibMin = me->tps1->sensorValue;
-	me->tps1_calibMax = me->tps1->sensorValue;
+    
+    //Normal
+    me->tps0_calibMin = me->tps0->sensorValue;
+    me->tps0_calibMax = me->tps0->sensorValue;
+    me->tps1_calibMin = me->tps1->sensorValue;
+    me->tps1_calibMax = me->tps1->sensorValue;
 }
 
 void TorqueEncoder_saveCalibrationToEEPROM(TorqueEncoder* me)
@@ -154,8 +149,10 @@ void TorqueEncoder_startCalibration(TorqueEncoder* me, ubyte1 secondsToRun)
         me->calibrated = FALSE;
         IO_RTC_StartTime(&(me->timestamp_calibrationStart));
         me->calibrationRunTime = secondsToRun;
-
-		Light_set(Light_dashEco, 1);
+    }
+    else
+    {
+        IO_RTC_StartTime(&(me->timestamp_calibrationStart));  //extend the calibration time
     }
 }
 
@@ -187,36 +184,27 @@ void TorqueEncoder_calibrationCycle(TorqueEncoder* me, ubyte1* errorCount)
         }
         else  //Calibration shutdown
         {
-			////If the sensor goes in reverse direction then flip the min/max values
-			//if (me->tps0_reverse == TRUE)
-			//{
-			//	float4 temp = me->tps0_calibMin;
-			//	me->tps0_calibMin = me->tps0_calibMax;
-			//	me->tps0_calibMax = temp;
-			//}
-
-			//if (me->tps1_reverse == TRUE)
-			//{
-			//	float4 temp = me->tps1_calibMin;
-			//	me->tps1_calibMin = me->tps1_calibMax;
-			//	me->tps1_calibMax = temp;
-			//}
-
-            //From Ryan: Should be less than 2 degrees of play on top, 5-10 at bottom of pedal travel
             //90 degree sensor active range.. so just say % = degrees
-            float4 pedalTopPlay = 1.02;
-            float4 pedalBottomPlay = .95;
+            //float4 pedalTopPlay = 1.05;
+            //float4 pedalBottomPlay = .95;
 
-            me->tps0_calibMin *= me->tps0_reverse ? pedalBottomPlay : pedalTopPlay;
-            me->tps0_calibMax *= me->tps0_reverse ? pedalTopPlay : pedalBottomPlay;
-            me->tps1_calibMin *= me->tps1_reverse ? pedalBottomPlay : pedalTopPlay;
-            me->tps1_calibMax *= me->tps1_reverse ? pedalTopPlay : pedalBottomPlay;
+            //me->tps0_calibMin *= me->tps0_reverse ? pedalBottomPlay : pedalTopPlay;
+            //me->tps0_calibMax *= me->tps0_reverse ? pedalTopPlay : pedalBottomPlay;
+            //me->tps1_calibMin *= me->tps1_reverse ? pedalBottomPlay : pedalTopPlay;
+            //me->tps1_calibMax *= me->tps1_reverse ? pedalTopPlay : pedalBottomPlay;
+
+            //Shrink the calibrated range slightly
+            float4 shrink0 = (me->tps0_calibMax - me->tps0_calibMin) * .05;
+            float4 shrink1 = (me->tps1_calibMax - me->tps1_calibMin) * .05;
+            me->tps0_calibMin += shrink0;
+            me->tps0_calibMax -= shrink0;
+            me->tps1_calibMin += shrink1;
+            me->tps1_calibMax -= shrink1;
 
 
 			me->runCalibration = FALSE;
 			me->calibrated = TRUE;
-			Light_set(Light_dashEco, 0);
-			
+			Light_set(Light_dashTCS, 0);
 
         }
 

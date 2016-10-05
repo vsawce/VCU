@@ -8,23 +8,30 @@
 #include "sensors.h"
 #include "motorController.h"
 #include "bms.h"
+#include "serial.h"
 
+/*
 typedef enum { CHECK_tpsOutOfRange    , CHECK_bpsOutOfRange
 			 , CHECK_tpsOpenOrShort   , CHECK_bpsOpenOrShort
 			 , CHECK_tpsNotCalibrated , CHECK_bpsNotCalibrated 
 			 , CHECK_tpsOutOfSync     , CHECK_tpsbpsImplausible
 			 } SafetyCheck;
+*/
 
 typedef struct _SafetyChecker SafetyChecker;
 
-SafetyChecker* SafetyChecker_new(void);
-void SafetyChecker_update(SafetyChecker* me, TorqueEncoder* tps, BrakePressureSensor* bps);
+SafetyChecker* SafetyChecker_new(SerialManager* sm, ubyte2 maxChargeAmps, ubyte2 maxDischargeAmps);
+void SafetyChecker_update(SafetyChecker* me, MotorController* mcm, BatteryManagementSystem* bms, TorqueEncoder* tps, BrakePressureSensor* bps, Sensor* HVILTermSense, Sensor* LVBattery);
 bool SafetyChecker_allSafe(SafetyChecker* me);
-bool SafetyChecker_getError(SafetyChecker* me, SafetyCheck check);
-bool SafetyChecker_getErrorByte(SafetyChecker* me, ubyte1* errorByte);
+ubyte4 SafetyChecker_getFaults(SafetyChecker* me);
+ubyte4 SafetyChecker_getWarnings(SafetyChecker* me);
+ubyte4 SafetyChecker_getNotices(SafetyChecker* me);
+void SafetyChecker_reduceTorque(SafetyChecker* me, MotorController* mcm, BatteryManagementSystem* bms);
+//bool SafetyChecker_getError(SafetyChecker* me, SafetyCheck check);
+//bool SafetyChecker_getErrorByte(SafetyChecker* me, ubyte1* errorByte);
 
 //ubyte2 checkPowerDraw(BatteryManagementSystem* bms, MotorController* mcm);
-ubyte2 checkBatteryPackTemp(BatteryManagementSystem* bms);
+void checkBatteryPackTemp(BatteryManagementSystem* bms);
 ubyte2 checkPowerDraw(BatteryManagementSystem* bms, MotorController* mcm);
 
 #endif //  _SAFETY_H

@@ -38,4 +38,6 @@ SRE2
 #VCU build files
 AddAPDB.html
 build/*
-!build/main.hex
+#!build/main.hex
+
+release/*

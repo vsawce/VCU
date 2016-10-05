@@ -32,23 +32,27 @@ void vcu_initializeADC(bool benchMode)
     //Digital/power outputs ---------------------------------------------------
     //Relay power outputs
     IO_DO_Init(IO_DO_00); IO_DO_Set(IO_DO_00, FALSE); //mcm0 Relay
-    IO_DO_Init(IO_DO_01); IO_DO_Set(IO_DO_01, FALSE); //HVIL shutdown relay
-    IO_DO_Init(IO_DO_02); IO_DO_Set(IO_DO_02, FALSE); //Water pump relay
-    IO_DO_Init(IO_DO_03); IO_DO_Set(IO_DO_03, FALSE); //Motor fan relay
+    IO_DO_Init(IO_DO_01); IO_DO_Set(IO_DO_01, TRUE); //HVIL shutdown relay
+    IO_DO_Init(IO_DO_02); IO_DO_Set(IO_DO_02, FALSE); //Water pump relay - always on per RMS HW manual pg 7 - NOT USED
+    IO_DO_Init(IO_DO_03); IO_DO_Set(IO_DO_03, FALSE); //Fan relay - motor fan and radiator fan are on same circuit
+    IO_DO_Init(IO_DO_04); IO_DO_Set(IO_DO_04, FALSE); //Battery fan relay
+    IO_DO_Init(IO_DO_05); IO_DO_Set(IO_DO_05, benchMode); //power output for switches - only used on bench
 
-	//BMS supply - always on
-	IO_DO_Init(IO_DO_04); IO_DO_Set(IO_DO_04, TRUE); //BMS power / Fault LED
+    //Lowside outputs (connects to ground when on)
+    IO_DO_Init(IO_ADC_CUR_00); IO_DO_Set(IO_ADC_CUR_00, FALSE); //TCS
+    IO_DO_Init(IO_ADC_CUR_01); IO_DO_Set(IO_ADC_CUR_01, FALSE); //Eco
+    IO_DO_Init(IO_ADC_CUR_02); IO_DO_Set(IO_ADC_CUR_02, FALSE); //Err
+    IO_DO_Init(IO_ADC_CUR_03); IO_DO_Set(IO_ADC_CUR_03, FALSE); //RTD
+
 
     //Wheel Speed Sensor supplies
     Sensor_WSS_FL.ioErr_powerInit = Sensor_WSS_FR.ioErr_powerInit = IO_DO_Init(IO_DO_06); //Front x2
 	Sensor_WSS_RL.ioErr_powerInit = Sensor_WSS_RR.ioErr_powerInit = IO_DO_Init(IO_DO_07); //Rear  x2
 
     //Digital PWM outputs ---------------------------------------------------
-	IO_PWM_Init(IO_PWM_02, 500, TRUE, FALSE, 0, FALSE, NULL); IO_PWM_SetDuty(IO_PWM_02, 0, NULL);  //TCS Light
-	IO_PWM_Init(IO_PWM_03, 500, TRUE, FALSE, 0, FALSE, NULL); IO_PWM_SetDuty(IO_PWM_03, 0, NULL);  //TCS Light
-	IO_PWM_Init(IO_PWM_04, 500, TRUE, FALSE, 0, FALSE, NULL); IO_PWM_SetDuty(IO_PWM_04, 0, NULL);  //Eco Light
-    IO_PWM_Init(IO_PWM_05, 500, TRUE, FALSE, 0, FALSE, NULL); IO_PWM_SetDuty(IO_PWM_05, 0, NULL);  //Error Light
-    IO_PWM_Init(IO_PWM_06, 500, TRUE, FALSE, 0, FALSE, NULL); IO_PWM_SetDuty(IO_PWM_06, 0, NULL);  //RTD Light
+	IO_PWM_Init(IO_PWM_02, 500, TRUE, FALSE, 0, FALSE, NULL); IO_PWM_SetDuty(IO_PWM_02, 0, NULL);  //Brake Light
+	IO_PWM_Init(IO_PWM_03, 500, TRUE, FALSE, 0, FALSE, NULL); IO_PWM_SetDuty(IO_PWM_03, benchMode == TRUE ? 0xFFFF : 0, NULL);  //Bench LED 12V source
+	IO_PWM_Init(IO_PWM_05, 100, TRUE, FALSE, 0, FALSE, NULL); IO_PWM_SetDuty(IO_PWM_05, .90 * 0xFFFF, NULL);  //Water pump signal 
     IO_PWM_Init(IO_PWM_07, 750, TRUE, FALSE, 0, FALSE, NULL); IO_PWM_SetDuty(IO_PWM_07, 0, NULL);  //RTD Sound
 
     //----------------------------------------------------------------------------
@@ -61,21 +65,21 @@ void vcu_initializeADC(bool benchMode)
     //IO_ADC_ChannelInit(IO_ADC_5V_00, IO_ADC_RATIOMETRIC, 0, 0, IO_ADC_SENSOR_SUPPLY_0, NULL);
     //IO_ADC_ChannelInit(IO_ADC_5V_01, IO_ADC_RATIOMETRIC, 0, 0, IO_ADC_SENSOR_SUPPLY_1, NULL);
 
-    //BPS
+    //TPS/BPS
 	//Sensor_BPS0.ioErr_init = IO_ADC_ChannelInit(IO_ADC_5V_02, IO_ADC_RATIOMETRIC, 0, 0, IO_ADC_SENSOR_SUPPLY_0, NULL);
     if (benchMode == TRUE)
     {
-        //Sensor_BenchTPS0.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_00, IO_ADC_RESISTIVE, 0, 0, 0, NULL);
-        //Sensor_BenchTPS1.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_01, IO_ADC_RESISTIVE, 0, 0, 0, NULL)
-        Sensor_BenchTPS0.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_00, IO_ADC_RATIOMETRIC, 0, 0, IO_ADC_SENSOR_SUPPLY_0, NULL);
-        Sensor_BenchTPS1.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_01, IO_ADC_RATIOMETRIC, 0, 0, IO_ADC_SENSOR_SUPPLY_1, NULL);
+        Sensor_TPS0.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_00, IO_ADC_RESISTIVE, 0, 0, 0, NULL);
+        Sensor_TPS1.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_01, IO_ADC_RESISTIVE, 0, 0, 0, NULL);
         Sensor_BPS0.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_02, IO_ADC_RESISTIVE, 0, 0, 0, NULL);
     }
     else //Not bench mode
     {
         //In the future, production TPS will be digital instead of analog (see PWD section, below)
-        Sensor_BenchTPS0.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_00, IO_ADC_RATIOMETRIC, 0, 0, IO_ADC_SENSOR_SUPPLY_0, NULL);
-        Sensor_BenchTPS1.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_01, IO_ADC_RATIOMETRIC, 0, 0, IO_ADC_SENSOR_SUPPLY_1, NULL);
+        //Sensor_TPS0.ioErr_signalInit = IO_PWD_PulseInit(IO_PWM_00, IO_PWD_HIGH_TIME);
+        //Sensor_TPS1.ioErr_signalInit = IO_PWD_PulseInit(IO_PWM_01, IO_PWD_HIGH_TIME);
+        Sensor_TPS0.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_00, IO_ADC_RATIOMETRIC, 0, 0, IO_ADC_SENSOR_SUPPLY_0, NULL);
+        Sensor_TPS1.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_01, IO_ADC_RATIOMETRIC, 0, 0, IO_ADC_SENSOR_SUPPLY_1, NULL);
         Sensor_BPS0.ioErr_signalInit = IO_ADC_ChannelInit(IO_ADC_5V_02, IO_ADC_RATIOMETRIC, 0, 0, IO_ADC_SENSOR_SUPPLY_0, NULL);
     }
 
@@ -85,7 +89,7 @@ void vcu_initializeADC(bool benchMode)
     //TCS Pot
     IO_ADC_ChannelInit(IO_ADC_5V_04, IO_ADC_RESISTIVE, 0, 0, 0, NULL);
 
-	//Shockpots
+	//Unused
 	//IO_ADC_ChannelInit(IO_ADC_5V_05, IO_ADC_RESISTIVE, 0, 0, 0, NULL);
     //IO_ADC_ChannelInit(IO_ADC_5V_06, IO_ADC_RESISTIVE, 0, 0, 0, NULL);
     //IO_ADC_ChannelInit(IO_ADC_5V_07, IO_ADC_RESISTIVE, 0, 0, 0, NULL);
@@ -94,22 +98,21 @@ void vcu_initializeADC(bool benchMode)
 	//PWD channels
 	//----------------------------------------------------------------------------
 	//TPS
-	Sensor_TPS0.ioErr_signalInit = IO_PWD_PulseInit(IO_PWM_00, IO_PWD_HIGH_TIME);
-	Sensor_TPS1.ioErr_signalInit = IO_PWD_PulseInit(IO_PWM_01, IO_PWD_HIGH_TIME);
+    //MOVED TO TPS/BPS BLOCK ABOVE
 	
 	//Wheel Speed Sensors (Pulse Width Detection)
-    Sensor_WSS_FR.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_08, IO_PWD_RISING_VAR);  //Is there a reason to look for rising vs falling edge?
-	Sensor_WSS_RR.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_09, IO_PWD_RISING_VAR);  //Is there a reason to look for rising vs falling edge?
-	Sensor_WSS_FL.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_10, IO_PWD_RISING_VAR);  //Is there a reason to look for rising vs falling edge?
-	Sensor_WSS_RL.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_11, IO_PWD_RISING_VAR);  //Is there a reason to look for rising vs falling edge?
-    
+    Sensor_WSS_FL.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_10, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
+    Sensor_WSS_FR.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_08, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
+    Sensor_WSS_RL.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_11, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
+    Sensor_WSS_RR.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_09, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
+	
     //----------------------------------------------------------------------------
 	//Switches
 	//----------------------------------------------------------------------------
-	Sensor_RTDButton.ioErr_signalInit = IO_DI_Init(IO_DI_00, IO_DI_PU_10K); //RTD Button
-    Sensor_EcoButton.ioErr_signalInit = IO_DI_Init(IO_DI_01, IO_DI_PU_10K); //Eco Button
-    Sensor_TCSSwitchA.ioErr_signalInit = IO_DI_Init(IO_DI_02, IO_DI_PU_10K); //TCS Switch A
-	Sensor_TCSSwitchB.ioErr_signalInit = IO_DI_Init(IO_DI_03, IO_DI_PU_10K); //TCS Switch B
+	Sensor_RTDButton.ioErr_signalInit = IO_DI_Init(IO_DI_00, IO_DI_PD_10K); //RTD Button
+    Sensor_EcoButton.ioErr_signalInit = IO_DI_Init(IO_DI_01, IO_DI_PD_10K); //Eco Button
+    Sensor_TCSSwitchUp.ioErr_signalInit = IO_DI_Init(IO_DI_02, IO_DI_PD_10K); //TCS Switch A
+	Sensor_TCSSwitchDown.ioErr_signalInit = IO_DI_Init(IO_DI_03, IO_DI_PD_10K); //TCS Switch B
     Sensor_HVILTerminationSense.ioErr_signalInit = IO_DI_Init(IO_DI_07, IO_DI_PD_10K); //HVIL Term sense, high = HV present
 
     //
@@ -132,9 +135,9 @@ void vcu_ADCWasteLoop(void)
         IO_PWM_SetDuty(IO_PWM_07, 0, NULL);  //Pin 103
 
         IO_DO_Set(IO_DO_00, FALSE); //False = low
-        IO_DO_Set(IO_DO_01, FALSE); //HVIL shutdown relay
-        IO_DO_Set(IO_DO_06, FALSE); //Front WSS x2
-        IO_DO_Set(IO_DO_07, FALSE); //Rear  WSS x2
+        //IO_DO_Set(IO_DO_01, FALSE); //HVIL shutdown relay
+        //IO_DO_Set(IO_DO_06, FALSE); //Front WSS x2
+        //IO_DO_Set(IO_DO_07, FALSE); //Rear  WSS x2
 
         //IO_DI (digital inputs) supposed to take 2 cycles before they return valid data
         IO_DI_Get(IO_DI_04, &tempData);
@@ -144,57 +147,9 @@ void vcu_ADCWasteLoop(void)
 
         IO_Driver_TaskEnd();
         //TODO: Find out if EACH pin needs 2 cycles or just the entire DIO unit
-        while (IO_RTC_GetTimeUS(timestamp_sensorpoll) < 125000);   // wait until 1/8s (125ms) have passed
+        while (IO_RTC_GetTimeUS(timestamp_sensorpoll) < 12500);   // wait until 1/8/10s (125ms) have passed
     }
 }
-
-///*****************************************************************************
-//* CAN
-//****************************************************************************/
-////Defaults
-//const ubyte1 canMessageLimit = 25;
-//IO_CAN_DATA_FRAME canMessages[25]; //MUST BE THE SAME NUMBER AS ABOVE
-////extern IO_CAN_DATA_FRAME canMessages[]; //  = { { { 0 } } };
-//
-////IO_CAN_DATA_FRAME canMessages[canMessageLimit];// = { { { 0 } } };
-//
-//const ubyte2 canMessageBaseId_VCU = 0x500;
-//const ubyte2 canSpeed_Channel0 = 500;
-//const ubyte2 canSpeed_Channel1 = 500;
-//
-////These are our four FIFO queues.  All messages should come/go through one of these queues.
-//ubyte1 canFifoHandle_HiPri_Read;
-//ubyte1 canFifoHandle_HiPri_Write;
-//ubyte1 canFifoHandle_LoPri_Read;
-//ubyte1 canFifoHandle_LoPri_Write;
-//
-////Initializes all four can FIFO queues
-//void vcu_initializeCAN(void)
-//{
-//    IO_CAN_DATA_FRAME canMessages[canMessageLimit];// = { { { 0 } } };
-//    //Activate the CAN channels --------------------------------------------------
-//    IO_CAN_Init(IO_CAN_CHANNEL_0, canSpeed_Channel0, 0, 0, 0);
-//    IO_CAN_Init(IO_CAN_CHANNEL_1, canSpeed_Channel1, 0, 0, 0);
-//
-//    //Configure the FIFO queues
-//    //This specifies: The handle names for the queues
-//    //, which channel the queue belongs to
-//    //, the # of messages (or maximum count?)
-//    //, the direction of the queue (in/out)
-//    //, the frame size
-//    //, and other stuff?
-//    IO_CAN_ConfigFIFO(&canFifoHandle_HiPri_Read, IO_CAN_CHANNEL_1, canMessageLimit, IO_CAN_MSG_READ, IO_CAN_STD_FRAME, 0, 0);
-//    IO_CAN_ConfigFIFO(&canFifoHandle_HiPri_Write, IO_CAN_CHANNEL_1, canMessageLimit, IO_CAN_MSG_WRITE, IO_CAN_STD_FRAME, 0, 0);
-//    IO_CAN_ConfigFIFO(&canFifoHandle_LoPri_Read, IO_CAN_CHANNEL_0, canMessageLimit, IO_CAN_MSG_READ, IO_CAN_STD_FRAME, 0, 0);
-//    IO_CAN_ConfigFIFO(&canFifoHandle_LoPri_Write, IO_CAN_CHANNEL_0, canMessageLimit, IO_CAN_MSG_WRITE, IO_CAN_STD_FRAME, 0, 0);
-//
-///*
-//    IO_CAN_ConfigMsg(&canFifoHandle_HiPri_Read, IO_CAN_CHANNEL_1, IO_CAN_MSG_READ, IO_CAN_STD_FRAME, 0, 0);
-//    IO_CAN_ConfigMsg(&canFifoHandle_HiPri_Write, IO_CAN_CHANNEL_1, IO_CAN_MSG_WRITE, IO_CAN_STD_FRAME, 0, 0);
-//    IO_CAN_ConfigMsg(&canFifoHandle_LoPri_Read, IO_CAN_CHANNEL_0, IO_CAN_MSG_READ, IO_CAN_STD_FRAME, 0, 0);
-//    IO_CAN_ConfigMsg(&canFifoHandle_LoPri_Write, IO_CAN_CHANNEL_0, IO_CAN_MSG_WRITE, IO_CAN_STD_FRAME, 0, 0);
-//*/
-//}
 
 /*****************************************************************************
 * Sensors
@@ -207,8 +162,6 @@ Sensor Sensor_WSS_FL;  // = { 2 };
 Sensor Sensor_WSS_FR;  // = { 2 };
 Sensor Sensor_WSS_RL;  // = { 2 };
 Sensor Sensor_WSS_RR;  // = { 2 };
-Sensor Sensor_BenchTPS0;
-Sensor Sensor_BenchTPS1;
 Sensor Sensor_WPS_FL;  // = { 3 };
 Sensor Sensor_WPS_FR;  // = { 3 };
 Sensor Sensor_WPS_RL;  // = { 3 };
@@ -216,10 +169,12 @@ Sensor Sensor_WPS_RR;  // = { 3 };
 Sensor Sensor_SAS;  // = { 4 };
 Sensor Sensor_LVBattery;
 
+Sensor Sensor_TCSKnob;
+
 Sensor Sensor_RTDButton;
 Sensor Sensor_EcoButton;
-Sensor Sensor_TCSSwitchA;
-Sensor Sensor_TCSSwitchB;
+Sensor Sensor_TCSSwitchUp;
+Sensor Sensor_TCSSwitchDown;
 Sensor Sensor_HVILTerminationSense;
 
 //Switches
@@ -229,11 +184,8 @@ Sensor Sensor_HVILTerminationSense;
 extern Sensor Sensor_LVBattery; // = { 0xA };  //Note: There will be no init for this "sensor"
 
 //Initialize the sensors with default values
-void vcu_initializeSensors(void)
+void vcu_initializeSensors(bool bench)
 {
-    //Torque Encoders (TPS is not really accurate since there's no throttle to position in an EV)
-    //TODO: specMin/specMax are ints, won't store decimal values!!!!!!!
-
 	//TPS: Ratiometric voltage sensor
 	//Sensor_TPS0.specMin = 0.5;
 	//Sensor_TPS0.specMax = 4.5;
@@ -246,20 +198,38 @@ void vcu_initializeSensors(void)
 	//VCU max sensible pulse: 100ms
 	//Sensor min: 1ms * 5% = .000050 = 50 microseconds
 	//Sensor max: 1ms * 95% = .000950 = 950 microseconds
-	Sensor_TPS0.specMin = .001 * .05;  //1kHz = .001s/cycle...
-	Sensor_TPS0.specMax = .001 * .95;
-	Sensor_TPS1.specMin = .001 * .95;
-	Sensor_TPS1.specMax = .001 * .05;
+    //////if (bench == TRUE)
+    //////{
+    //////    //Resistive
+    //////    Sensor_TPS0.specMin = 0;
+    //////    Sensor_TPS1.specMin = 0;
+    //////    Sensor_BPS0.specMin = 0;
+    //////    Sensor_TPS0.specMax = 12500;
+    //////    Sensor_TPS1.specMax = 12500;
+    //////    Sensor_BPS0.specMax = 6500; //6.5k
+    //////    //TPS: Pot
+    //////    //Do not reverse sensor values here.fd
+    //////}
+    //////else
+    //////{
+        //Ratiometric
+        Sensor_TPS0.specMin = 500; //00.500 Volts +/- 0.6% of active electrical angle
+        Sensor_TPS0.specMax = 4500; //04.500 Volts
+        Sensor_TPS1.specMin = 500;
+        Sensor_TPS1.specMax = 4500;
 
-	//TPS: Pot
-	Sensor_BenchTPS0.specMin = 1;
-    Sensor_BenchTPS0.specMax = 5001;
-    Sensor_BenchTPS1.specMin = 1;
-    Sensor_BenchTPS1.specMax = 5001;
+        //Note: BPS sits slightly below 0.5V but it's still within range
+        Sensor_BPS0.specMin = 500 - 4000 * .005; //0.5V +/- 0.5%
+        Sensor_BPS0.specMax = 4500 + 4000 * .0025; //+/- 0.25%
+
+        //PWM
+        //Sensor_TPS0.specMin = .001 * .05;  //1kHz = .001s/cycle...
+        //Sensor_TPS0.specMax = .001 * .95;
+        //Sensor_TPS1.specMin = .001 * .95;
+        //Sensor_TPS1.specMax = .001 * .05;
+    //////}
 
     //Brake Position Sensors
-	Sensor_BPS0.specMin = 1;
-	Sensor_BPS0.specMax = 10000;
 	//Sensor_BPS0.specMin = 0.5;
 	//Sensor_BPS0.specMax = 4.5;
 	//Sensor_BPS1.specMin = 0.5;
@@ -288,22 +258,3 @@ void vcu_initializeSensors(void)
     Sensor_LVBattery;// = { 0xA };  //Note: There will be no init for this "sensor"
     */
 }
-
-/*****************************************************************************
-* MCU
-****************************************************************************/
-#include "motorController.h"
-/*
-MotorController MCU0;
-//Initialize the motor controllers (assign the can message IDs)
-void vcu_initializeMCU(void)
-{
-    MCU0.canMessageBaseId = 0xA0;
-    //Dummy timestamp for last MCU message
-    IO_RTC_StartTime(&MCU0.commands.timeStamp_lastCommandSent);
-
-    MCU0.lockoutStatus = UNKNOWN;
-    MCU0.inverterStatus = UNKNOWN;
-    MCU0.startRTDS = FALSE;
-}
-*/

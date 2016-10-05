@@ -26,8 +26,10 @@
 #include <stdio.h>
 #include <string.h>
 #include "APDB.h"
+#include "IO_DIO.h"
 #include "IO_Driver.h"  //Includes datatypes, constants, etc - should be included in every c file
 #include "IO_RTC.h"
+#include "IO_UART.h"
 //#include "IO_CAN.h"
 //#include "IO_PWM.h"
 
@@ -35,17 +37,15 @@
 #include "initializations.h"
 #include "sensors.h"
 #include "canManager.h"
-//#include "canInput.h"
-//#include "canOutput.h"
-//#include "outputCalculations.h"
 #include "motorController.h"
 #include "readyToDriveSound.h"
 #include "torqueEncoder.h"
 #include "brakePressureSensor.h"
 #include "wheelSpeeds.h"
 #include "safety.h"
-
 #include "sensorCalculations.h"
+#include "serial.h"
+#include "cooling.h"
 
 //Application Database, needed for TTC-Downloader
 APDB appl_db =
@@ -93,7 +93,8 @@ extern Sensor Sensor_WPS_FR;
 extern Sensor Sensor_WPS_RL;
 extern Sensor Sensor_WPS_RR;
 extern Sensor Sensor_SAS;
- 
+extern Sensor Sensor_TCSKnob;
+
 extern Sensor Sensor_RTDButton;
 extern Sensor Sensor_TEMP_BrakingSwitch;
 extern Sensor Sensor_EcoButton;
@@ -105,39 +106,80 @@ extern Sensor Sensor_EcoButton;
 ****************************************************************************/
 void main(void)
 {
+    ubyte4 timestamp_startTime = 0;
+    ubyte4 timestamp_EcoButton = 0;
+    ubyte1 calibrationErrors;  //NOT USED
 
     /*******************************************/
     /*            Initializations              */
     /*******************************************/
     IO_Driver_Init(NULL); //Handles basic startup for all VCU subsystems
 
+    //Special: Initialize serial first so we can use it to debug init of other subsystems
+    SerialManager* serialMan = SerialManager_new();
+    IO_RTC_StartTime(&timestamp_startTime);
+    SerialManager_send(serialMan, "\n\n\n\n\n\n\n\n\n\n----------------------------------------------------\n");
+    //SerialManager_send(serialMan, IO_RTC_GetTimeUS(timestamp_startTime));
+    SerialManager_send(serialMan, "VCU serial is online.\n");
+
+    //----------------------------------------------------------------------------
+    // Check if we're on the bench or not
+    //----------------------------------------------------------------------------
+    bool bench;
+    IO_DI_Init(IO_DI_06, IO_DI_PD_10K);
+    IO_RTC_StartTime(&timestamp_startTime);
+    while (IO_RTC_GetTimeUS(timestamp_startTime) < 55555)
+    {
+        IO_Driver_TaskBegin();
+
+        //IO_DI (digital inputs) supposed to take 2 cycles before they return valid data
+        IO_DI_Get(IO_DI_06, &bench);
+
+        IO_Driver_TaskEnd();
+        //TODO: Find out if EACH pin needs 2 cycles or just the entire DIO unit
+        while (IO_RTC_GetTimeUS(timestamp_startTime) < 10000);   // wait until 10ms have passed
+    }
+    IO_DI_DeInit(IO_DI_06);
+    SerialManager_send(serialMan, bench == TRUE ? "VCU is in bench mode.\n" : "VCU is NOT in bench mode.\n");
+    
     //----------------------------------------------------------------------------
     // VCU Subsystem Initializations
     // Eventually, all of these functions should be made obsolete by creating
     // objects instead, like the RTDS/MCM/TPS objects below
     //----------------------------------------------------------------------------
-	bool bench = TRUE;
-    
+    SerialManager_send(serialMan, "VCU objects/subsystems initializing.\n");
     vcu_initializeADC(bench);  //Configure and activate all I/O pins on the VCU
     //vcu_initializeCAN();
-    vcu_initializeSensors();
+    vcu_initializeSensors(bench);
     //vcu_initializeMCU();
 
     //Do some loops until the ADC stops outputting garbage values
     vcu_ADCWasteLoop();
 
+    //vcu_init functions may have to be performed BEFORE creating CAN Manager object
+    CanManager* canMan = CanManager_new(500, 40, 40, 500, 20, 20, 200000, serialMan);  //3rd param = messages per node (can0/can1; read/write)
+    //can0_busSpeed ---------------------^    ^   ^   ^    ^   ^     ^         ^
+    //can0_read_messageLimit -----------------|   |   |    |   |     |         |
+    //can0_write_messageLimit---------------------+   |    |   |     |         |
+    //can1_busSpeed-----------------------------------+    |   |     |         |
+    //can1_read_messageLimit-------------------------------+   |     |         |
+    //can1_write_messageLimit----------------------------------+     |         |
+    //defaultSendDelayus---------------------------------------------+         |
+    //SerialManager* sm--------------------------------------------------------+
+
     //----------------------------------------------------------------------------
-    // External Devices - Object Initializations (including default values)
-    //----------------------------------------------------------------------------
-    CanManager* canMan = CanManager_new(500, 40, 40, 500, 20, 20, 250000);  //3rd param = messages per node (can0/can1; read/write)
+    // Object representations of external devices
+    // Most default values for things should be specified here
+    //----------------------------------------------------------------------------    
     ReadyToDriveSound* rtds = RTDS_new();
 	//BatteryManagementSystem* bms = BMS_new();
-    MotorController* mcm0 = MotorController_new(0xA0, FORWARD, 100); //CAN addr, direction, torque limit x10 (100 = 10Nm)
+    MotorController* mcm0 = MotorController_new(serialMan, 0xA0, FORWARD, 1000, 5, 15); //CAN addr, direction, torque limit x10 (100 = 10Nm)
 	TorqueEncoder* tps = TorqueEncoder_new(bench);
 	BrakePressureSensor* bps = BrakePressureSensor_new();
 	WheelSpeeds* wss = WheelSpeeds_new(18, 18, 16, 16);
-	SafetyChecker* sc = SafetyChecker_new();
-	BatteryManagementSystem* bms = BMS_new(0x620);
+	SafetyChecker* sc = SafetyChecker_new(serialMan, 320, 32);  //Must match amp limits 
+	BatteryManagementSystem* bms = BMS_new(serialMan, 0x620);
+    CoolingSystem* cs = CoolingSystem_new(serialMan);
 
     //----------------------------------------------------------------------------
     // TODO: Additional Initial Power-up functions
@@ -150,22 +192,22 @@ void main(void)
     /*       PERIODIC APPLICATION CODE         */
     /*******************************************/
     /* main loop, executed periodically with a defined cycle time (here: 5 ms) */
-
-	ubyte4 timestamp_sensorpoll = 0;
-    ubyte1 calibrationErrors;
-
+    ubyte4 timestamp_mainLoopStart = 0;
     //IO_RTC_StartTime(&timestamp_calibStart);
+    SerialManager_send(serialMan, "VCU initializations complete.  Entering main loop.\n");
     while (1)
     {
         //----------------------------------------------------------------------------
         // Task management stuff (start)
         //----------------------------------------------------------------------------
         //Get a timestamp of when this task started from the Real Time Clock
-        IO_RTC_StartTime(&timestamp_sensorpoll);
+        IO_RTC_StartTime(&timestamp_mainLoopStart);
         //Mark the beginning of a task - what does this actually do?
         IO_Driver_TaskBegin();
 
+        //SerialManager_send(serialMan, "VCU has entered main loop.");
 
+        
         /*******************************************/
         /*              Read Inputs                */
         /*******************************************/
@@ -175,9 +217,20 @@ void main(void)
         //Get readings from our sensors and other local devices (buttons, 12v battery, etc)
 		sensors_updateSensors();
 
-        //canInput - pull messages from CAN FIFO and update our object representations.
-        //Also echo can0 messages to can1 for DAQ.
+        //Pull messages from CAN FIFO and update our object representations.
+        //Also echoes can0 messages to can1 for DAQ.
         CanManager_read(canMan, CAN0_HIPRI, mcm0, bms);
+        /*switch (CanManager_getReadStatus(canMan, CAN0_HIPRI))
+        {
+            case IO_E_OK: SerialManager_send(serialMan, "IO_E_OK: everything fine\n"); break;
+            case IO_E_NULL_POINTER: SerialManager_send(serialMan, "IO_E_NULL_POINTER: null pointer has been passed to function\n"); break;
+            case IO_E_CAN_FIFO_FULL: SerialManager_send(serialMan, "IO_E_CAN_FIFO_FULL: overflow of FIFO buffer\n"); break;
+            case IO_E_CAN_WRONG_HANDLE: SerialManager_send(serialMan, "IO_E_CAN_WRONG_HANDLE: invalid handle has been passed\n"); break;
+            case IO_E_CHANNEL_NOT_CONFIGURED: SerialManager_send(serialMan, "IO_E_CHANNEL_NOT_CONFIGURED: the given handle has not been configured\n"); break;
+            case IO_E_CAN_OLD_DATA: SerialManager_send(serialMan, "IO_E_CAN_OLD_DATA: no data has been received\n"); break;
+            default: SerialManager_send(serialMan, "Warning: Unknown CAN read status\n"); break;
+        }*/
+
 
         /*******************************************/
         /*          Perform Calculations           */
@@ -188,14 +241,31 @@ void main(void)
 
         //Run calibration if commanded
 		//if (IO_RTC_GetTimeUS(timestamp_calibStart) < (ubyte4)5000000)
-		if (Sensor_EcoButton.sensorValue == FALSE)
+		if (Sensor_EcoButton.sensorValue == TRUE)
 		{
-			//calibrateTPS(TRUE, 5);
-			TorqueEncoder_startCalibration(tps, 5);
-			BrakePressureSensor_startCalibration(bps, 5);
-			//Light_set(Light_dashError, 1);
-			//DIGITAL OUTPUT 4 for STATUS LED
+            if (timestamp_EcoButton == 0)
+            {
+                SerialManager_send(serialMan, "Eco button detected\n");
+                IO_RTC_StartTime(&timestamp_EcoButton);
+            }
+            else if (IO_RTC_GetTimeUS(timestamp_EcoButton) >= 3000000)
+            {
+                SerialManager_send(serialMan, "Eco button held 3s - starting calibrations\n");
+                //calibrateTPS(TRUE, 5);
+                TorqueEncoder_startCalibration(tps, 5);
+                BrakePressureSensor_startCalibration(bps, 5);
+                Light_set(Light_dashTCS, 1);
+                //DIGITAL OUTPUT 4 for STATUS LED
+            }
 		}
+        else
+        {
+            if (IO_RTC_GetTimeUS(timestamp_EcoButton) > 10000 && IO_RTC_GetTimeUS(timestamp_EcoButton) < 1000000)
+            {
+                SerialManager_send(serialMan, "Eco mode requested\n");
+            }
+            timestamp_EcoButton = 0;
+        }
 		TorqueEncoder_update(tps);
         //Every cycle: if the calibration was started and hasn't finished, check the values again
         TorqueEncoder_calibrationCycle(tps, &calibrationErrors); //Todo: deal with calibration errors
@@ -214,45 +284,43 @@ void main(void)
 			StateObserver //choose driver command or ctrl law
 		*/	
 
+        CoolingSystem_calculations(cs, MCM_getTemp(mcm0), MCM_getMotorTemp(mcm0), BMS_getMaxTemp(bms));
+        //CoolingSystem_calculations(cs, 20, 20, 20);
+        CoolingSystem_enactCooling(cs); //This belongs under outputs but it doesn't really matter for cooling
 
         //Assign motor controls to MCM command message
         //motorController_setCommands(rtds);
         //DOES NOT set inverter command or rtds flag
+        MCM_readTCSSettings(mcm0, &Sensor_TCSSwitchUp, &Sensor_TCSSwitchDown, &Sensor_TCSKnob);
         MCM_calculateCommands(mcm0, tps, bps);
 
-        SafetyChecker_update(sc, tps, bps);
+        SafetyChecker_update(sc, mcm0, bms, tps, bps, &Sensor_HVILTerminationSense, &Sensor_LVBattery);
 
         /*******************************************/
         /*  Output Adjustments by Safety Checker   */
         /*******************************************/
-        //SafetyChecker_ReduceTorque()
-        //SafetyChecker_?
+        SafetyChecker_reduceTorque(sc, mcm0, bms);
 
         /*******************************************/
         /*              Enact Outputs              */
         /*******************************************/
         //MOVE INTO SAFETYCHECKER
         //SafetyChecker_setErrorLight(sc);
-        if (SafetyChecker_allSafe(sc) == TRUE)
-        {
-            Light_set(Light_dashError, 0);
-        }
-        else
-        {
-            Light_set(Light_dashError, 1);
-        }
-
+        Light_set(Light_dashError, (SafetyChecker_getFaults(sc) == 0) ? 0 : 1);
         //Handle motor controller startup procedures
-        MotorControllerPowerManagement(mcm0, tps, rtds);
+        MCM_relayControl(mcm0, &Sensor_HVILTerminationSense);
+        MCM_inverterControl(mcm0, tps, bps, rtds);
+        //CanManager_sendMCMCommandMessage(mcm0, canMan, FALSE);
 
         //Drop the sensor readings into CAN (just raw data, not calculated stuff)
-        //MotorController_sendCommandMessage();
         //canOutput_sendMCUControl(mcm0, FALSE);
 
         //Send debug data
         canOutput_sendDebugMessage(canMan, tps, bps, mcm0, wss, sc);
         //canOutput_sendSensorMessages();
         //canOutput_sendStatusMessages(mcm0);
+
+        
 
         //----------------------------------------------------------------------------
         // Task management stuff (end)
@@ -262,7 +330,10 @@ void main(void)
         //Task end function for IO Driver - This function needs to be called at the end of every SW cycle
         IO_Driver_TaskEnd();
         //wait until the cycle time is over
-        while (IO_RTC_GetTimeUS(timestamp_sensorpoll) < 1000);   // wait until 1ms (1000us) have passed
+        while (IO_RTC_GetTimeUS(timestamp_mainLoopStart) < 33000) // 1000 = 1ms
+        {
+            IO_UART_Task();  //The task function shall be called every SW cycle.
+        }
 
     } //end of main loop
 
