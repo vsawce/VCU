@@ -61,6 +61,21 @@ WheelSpeeds* WheelSpeeds_new(float4 tireDiameterInches_F, float4 tireDiameterInc
 
 void WheelSpeeds_update(WheelSpeeds* me)
 {
+    switch (Sensor_WSS_FL.ioErr_signalGet)
+    {
+    case IO_E_OK:                        //everything fine
+        break;
+    case IO_E_CHANNEL_NOT_CONFIGURED:    //the given channel is not configured
+    case IO_E_INVALID_CHANNEL_ID:        //the given channel id does not exist
+    case IO_E_PWD_NOT_FINISHED:          //not enough edges to accumulate a result
+    case IO_E_NULL_POINTER:              //
+        break;
+    case IO_E_PWD_CAPTURE_ERROR:         //frequency too high
+    case IO_E_PWD_HIGH_LEVEL:            //only a constant high level is detected
+    case IO_E_PWD_LOW_LEVEL:             //only a constant low level is detected
+        break;
+    }
+
 	//speed (m/s) = m * pulses/sec / pulses
 	me->speed_FL = me->tireCircumferenceMeters_F * Sensor_WSS_FL.sensorValue / me->pulsesPerRotation_F;
 	me->speed_FR = me->tireCircumferenceMeters_F * Sensor_WSS_FR.sensorValue / me->pulsesPerRotation_F;
