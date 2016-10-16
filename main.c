@@ -215,7 +215,7 @@ void main(void)
         // Handle data input streams
         //----------------------------------------------------------------------------
         //Get readings from our sensors and other local devices (buttons, 12v battery, etc)
-		sensors_updateSensors();
+		sensors_updateSensors(); 
 
         //Pull messages from CAN FIFO and update our object representations.
         //Also echoes can0 messages to can1 for DAQ.
@@ -286,7 +286,6 @@ void main(void)
 
         CoolingSystem_calculations(cs, MCM_getTemp(mcm0), MCM_getMotorTemp(mcm0), BMS_getMaxTemp(bms));
         //CoolingSystem_calculations(cs, 20, 20, 20);
-        CoolingSystem_enactCooling(cs); //This belongs under outputs but it doesn't really matter for cooling
 
         //Assign motor controls to MCM command message
         //motorController_setCommands(rtds);
@@ -304,6 +303,7 @@ void main(void)
         /*******************************************/
         /*              Enact Outputs              */
         /*******************************************/
+        CoolingSystem_enactCooling(cs); //This belongs under outputs but it doesn't really matter for cooling
         //MOVE INTO SAFETYCHECKER
         //SafetyChecker_setErrorLight(sc);
         Light_set(Light_dashError, (SafetyChecker_getFaults(sc) == 0) ? 0 : 1);
@@ -326,6 +326,7 @@ void main(void)
         // Task management stuff (end)
         //----------------------------------------------------------------------------
         RTDS_shutdownHelper(rtds); //Stops the RTDS from playing if the set time has elapsed
+        SerialManager_sprintf(serialMan, "WSS Value: %i\n", Sensor_WSS_RR.sensorValue);
 
         //Task end function for IO Driver - This function needs to be called at the end of every SW cycle
         IO_Driver_TaskEnd();
