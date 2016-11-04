@@ -101,11 +101,15 @@ void vcu_initializeADC(bool benchMode)
     //MOVED TO TPS/BPS BLOCK ABOVE
 	
 	//Wheel Speed Sensors (Pulse Width Detection)
-    Sensor_WSS_FL.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_10, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
-    Sensor_WSS_FR.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_08, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
-    Sensor_WSS_RL.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_11, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
-    Sensor_WSS_RR.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_09, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
-	
+    //Sensor_WSS_FL.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_10, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
+    //Sensor_WSS_FR.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_08, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
+    //Sensor_WSS_RL.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_11, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
+    //Sensor_WSS_RR.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_09, IO_PWD_FALLING_VAR);  //Is there a reason to look for rising vs falling edge?
+    Sensor_WSS_FL.ioErr_signalInit = IO_PWD_ComplexInit(IO_PWD_10, IO_PWD_HIGH_TIME, IO_PWD_RISING_VAR, IO_PWD_RESOLUTION_0_8, 4, IO_PWD_THRESH_1_25V, IO_PWD_PD_10K, NULL);  //Is there a reason to look for rising vs falling edge?
+    Sensor_WSS_FR.ioErr_signalInit = IO_PWD_ComplexInit(IO_PWD_08, IO_PWD_HIGH_TIME, IO_PWD_RISING_VAR, IO_PWD_RESOLUTION_0_8, 4, IO_PWD_THRESH_1_25V, IO_PWD_PD_10K, NULL);
+    Sensor_WSS_RL.ioErr_signalInit = IO_PWD_ComplexInit(IO_PWD_11, IO_PWD_HIGH_TIME, IO_PWD_RISING_VAR, IO_PWD_RESOLUTION_0_8, 4, IO_PWD_THRESH_1_25V, IO_PWD_PD_10K, NULL);
+    Sensor_WSS_RR.ioErr_signalInit = IO_PWD_ComplexInit(IO_PWD_09, IO_PWD_HIGH_TIME, IO_PWD_RISING_VAR, IO_PWD_RESOLUTION_0_8, 4, IO_PWD_THRESH_1_25V, IO_PWD_PD_10K, NULL);
+
     //----------------------------------------------------------------------------
 	//Switches
 	//----------------------------------------------------------------------------
