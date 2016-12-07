@@ -91,13 +91,13 @@ void sensors_updateSensors(void)
     //Sensor_WSS_FR.ioErr_signalGet = IO_PWD_FreqGet(IO_PWD_08, &Sensor_WSS_FR.sensorValue);
     //Sensor_WSS_RL.ioErr_signalGet = IO_PWD_FreqGet(IO_PWD_11, &Sensor_WSS_RL.sensorValue);
     //Sensor_WSS_RR.ioErr_signalGet = IO_PWD_FreqGet(IO_PWD_09, &Sensor_WSS_RR.sensorValue);
-    ubyte2 garbage1 = 0;
-    ubyte2 garbage2 = 0;
+    ubyte4 pulseWidth = 0;
+	IO_PWD_PULSE_SAMPLES samples;
 
-    Sensor_WSS_FL.ioErr_signalGet = IO_PWD_ComplexGet(IO_PWD_10, &Sensor_WSS_FL.sensorValue, &garbage1, &garbage2);
-    Sensor_WSS_FR.ioErr_signalGet = IO_PWD_ComplexGet(IO_PWD_08, &Sensor_WSS_FR.sensorValue, &garbage1, &garbage2);
-    Sensor_WSS_RL.ioErr_signalGet = IO_PWD_ComplexGet(IO_PWD_11, &Sensor_WSS_RL.sensorValue, &garbage1, &garbage2);
-    Sensor_WSS_RR.ioErr_signalGet = IO_PWD_ComplexGet(IO_PWD_09, &Sensor_WSS_RR.sensorValue, &garbage1, &garbage2);
+    Sensor_WSS_FL.ioErr_signalGet = IO_PWD_ComplexGet(IO_PWD_10, &Sensor_WSS_FL.sensorValue, &pulseWidth, &samples);
+    Sensor_WSS_FR.ioErr_signalGet = IO_PWD_ComplexGet(IO_PWD_08, &Sensor_WSS_FR.sensorValue, &pulseWidth, &samples);
+    Sensor_WSS_RL.ioErr_signalGet = IO_PWD_ComplexGet(IO_PWD_11, &Sensor_WSS_RL.sensorValue, &pulseWidth, &samples);
+    Sensor_WSS_RR.ioErr_signalGet = IO_PWD_ComplexGet(IO_PWD_09, &Sensor_WSS_RR.sensorValue, &pulseWidth, &samples);
         
     //Switches / Digital ---------------------------------------------------
 	Sensor_RTDButton.ioErr_signalGet = IO_DI_Get(IO_DI_00, &Sensor_RTDButton.sensorValue);
