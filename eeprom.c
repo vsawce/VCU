@@ -58,7 +58,7 @@ void main(void)
     IO_DO_Init(IO_ADC_CUR_00);
     IO_DO_Init(IO_DO_03);
 
-        bool ecoSwitch_prev;
+        bool ecoSwitch_prev; //initialize these?
         bool ecoSwitch_now;
         bool tcs;
         ubyte1 eeprom_store = FALSE; //might be garbage
@@ -80,7 +80,13 @@ void main(void)
             //on-click
             IO_EEPROM_Write(1,1, &ecoSwitch_now);
         }
-
+        /*
+        if(ecoSwitch_prev == FALSE && ecoSwitch_now == FALSE){
+            //on-click
+            IO_EEPROM_Read(3,1, &eeprom_store); //might be garbage
+            IO_DO_Set( IO_DO_03, eeprom_store);
+        }
+        */
         IO_EEPROM_Read(3,1, &eeprom_store); //might be garbage
         IO_DO_Set( IO_DO_03, eeprom_store);
 
