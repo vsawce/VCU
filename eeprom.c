@@ -51,12 +51,12 @@ void main(void)
     IO_EEPROM_Init( NULL ); //added
   
     IO_DI_Init( IO_DI_01
-              , IO_DI_PD_10K );
+              , IO_DI_PD_10K ); //eco switch
     IO_DO_Init( IO_ADC_CUR_01); //turns ground on/off
     //TCS switch
-    IO_DI_Init( IO_DI_02, IO_DI_PD_10K );
-    IO_DO_Init(IO_ADC_CUR_00);
-    IO_DO_Init(IO_DO_03);
+    IO_DI_Init( IO_DI_02, IO_DI_PD_10K ); //TCS switch A
+    IO_DO_Init(IO_ADC_CUR_00); 
+    IO_DO_Init(IO_DO_03); //Motor fan relay
 
         bool ecoSwitch_prev; //initialize these?
         bool ecoSwitch_now;
@@ -71,14 +71,14 @@ void main(void)
 
         ecoSwitch_prev = ecoSwitch_now;
 
-        IO_DI_Get( IO_DI_01, &ecoSwitch_now);
-        IO_DI_Get( IO_DI_02, &tcs);
-        IO_DO_Set( IO_ADC_CUR_01, ecoSwitch_now);
-        IO_DO_Set( IO_ADC_CUR_00, tcs);
+        IO_DI_Get( IO_DI_01, &ecoSwitch_now); //eco switch
+        IO_DI_Get( IO_DI_02, &tcs); //tcs switch A
+        IO_DO_Set( IO_ADC_CUR_01, ecoSwitch_now); //ground
+        IO_DO_Set( IO_ADC_CUR_00, tcs); //ground
         
         if(ecoSwitch_prev == FALSE && ecoSwitch_now == TRUE){
             //on-click
-            IO_EEPROM_Write(1,1, &ecoSwitch_now);
+            IO_EEPROM_Write(1,1, &ecoSwitch_now); 
         }
         /*
         if(ecoSwitch_prev == FALSE && ecoSwitch_now == FALSE){
@@ -88,7 +88,7 @@ void main(void)
         }
         */
         IO_EEPROM_Read(3,1, &eeprom_store); //might be garbage
-        IO_DO_Set( IO_DO_03, eeprom_store);
+        IO_DO_Set( IO_DO_03, eeprom_store); //motor fan relay?
 
         IO_Driver_TaskEnd();
 
