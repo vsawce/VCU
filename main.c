@@ -157,7 +157,7 @@ void main(void)
     vcu_ADCWasteLoop();
 
     //vcu_init functions may have to be performed BEFORE creating CAN Manager object
-    CanManager* canMan = CanManager_new(500, 40, 40, 500, 20, 20, 200000, serialMan);  //3rd param = messages per node (can0/can1; read/write)
+    CanManager* canMan = CanManager_new(500, 40, 40, 500, 20, 20, 200000);  //3rd param = messages per node (can0/can1; read/write)
     //can0_busSpeed ---------------------^    ^   ^   ^    ^   ^     ^         ^
     //can0_read_messageLimit -----------------|   |   |    |   |     |         |
     //can0_write_messageLimit---------------------+   |    |   |     |         |
@@ -165,7 +165,7 @@ void main(void)
     //can1_read_messageLimit-------------------------------+   |     |         |
     //can1_write_messageLimit----------------------------------+     |         |
     //defaultSendDelayus---------------------------------------------+         |
-    //SerialManager* sm--------------------------------------------------------+
+    //SerialManager discontinued-----------------------------------------------+
 
     //----------------------------------------------------------------------------
     // Object representations of external devices
@@ -310,6 +310,11 @@ void main(void)
         //Handle motor controller startup procedures
         MCM_relayControl(mcm0, &Sensor_HVILTerminationSense);
         MCM_inverterControl(mcm0, tps, bps, rtds);
+        
+        /*
+        Outdated!!!
+        Modify sendDebug for EEPROM stuff
+        */
         //CanManager_sendMCMCommandMessage(mcm0, canMan, FALSE);
 
         //Drop the sensor readings into CAN (just raw data, not calculated stuff)
