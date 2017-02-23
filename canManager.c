@@ -1,4 +1,3 @@
-
 #include <stdlib.h> //malloc
 
 #include "IO_Driver.h" 
@@ -13,6 +12,7 @@
 #include "safety.h"
 #include "wheelSpeeds.h"
 #include "serial.h"
+//#include "eeprom.h"
 
 
 struct _CanManager {
@@ -589,8 +589,8 @@ void canOutput_sendDebugMessage(CanManager* me, TorqueEncoder* tps, BrakePressur
     canMessages[canMessageCount - 1].data[byteNum++] = MCM_commands_getTorqueLimit(mcm) >> 8;
     canMessages[canMessageCount - 1].length = byteNum;
 
-    //EEPROM writing hex settings
-    canMessageCount++;
+    //EEPROM settings through Read/Write
+    /*canMessageCount++;
     byteNum = 0;
     canMessages[canMessageCount - 1].id_format = ;
     canMessages[canMessageCount - 1].id = ;
@@ -599,10 +599,10 @@ void canOutput_sendDebugMessage(CanManager* me, TorqueEncoder* tps, BrakePressur
     canMessages[canMessageCount - 1].data[byteNum++] = ;  
     canMessages[canMessageCount - 1].data[byteNum++] = ;  
     canMessages[canMessageCount - 1].data[byteNum++] = ;
-    canMessages[canMessageCount - 1].data[byteNum++] = ; \
+    canMessages[canMessageCount - 1].data[byteNum++] = ; 
     canMessages[canMessageCount - 1].data[byteNum++] = ;
     canMessages[canMessageCount - 1].data[byteNum++] = ;
-    canMessages[canMessageCount - 1].length = byteNum;
+    canMessages[canMessageCount - 1].length = byteNum;*/
     //----------------------------------------------------------------------------
     //Additional sensors
     //----------------------------------------------------------------------------
