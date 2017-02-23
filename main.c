@@ -276,7 +276,7 @@ void main(void)
 
 		WheelSpeeds_update(wss);
 		//DataAquisition_update(); //includes accelerometer
-		//TireModel_update()
+ 		//TireModel_update()
 		//ControlLaw_update();
 		/*
 		ControlLaw //Tq command
@@ -286,7 +286,7 @@ void main(void)
 
         CoolingSystem_calculations(cs, MCM_getTemp(mcm0), MCM_getMotorTemp(mcm0), BMS_getMaxTemp(bms));
         //CoolingSystem_calculations(cs, 20, 20, 20);
-        CoolingSystem_enactCooling(cs); //This belongs under outputs but it doesn't really matter for cooling
+,        CoolingSystem_enactCooling(cs); //This belongs under outputs but it doesn't really matter for cooling
 
         //Assign motor controls to MCM command message
         //motorController_setCommands(rtds);
@@ -321,7 +321,7 @@ void main(void)
         //canOutput_sendMCUControl(mcm0, FALSE);
 
         //Send debug data
-        canOutput_sendDebugMessage(canMan, tps, bps, mcm0, wss, sc);
+        canOutput_sendDebugMessage(canMan, tps, bps, mcm0, wss, sc, ep);
         //canOutput_sendSensorMessages();
         //canOutput_sendStatusMessages(mcm0);
 
