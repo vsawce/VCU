@@ -31,7 +31,8 @@
  */
 typedef enum
 {
-    EEPROM_val_TPS0_calibMin    //!< ubyte2
+    EEPROM_val_doNotUse    //!< ubyte4
+    , EEPROM_val_TPS0_calibMin    //!< ubyte2
     , EEPROM_val_TPS0_calibMax  //!< ubyte2
     , EEPROM_val_TPS1_calibMin  //!< ubyte2
     , EEPROM_val_TPS1_calibMax  //!< ubyte2
@@ -44,6 +45,8 @@ typedef enum
     , EEPROM_val_regen_percentBPSForMaxRegen
     , EEPROM_val_regen_minimumSpeedKPH
     , EEPROM_val_regen_SpeedRampStart
+
+    //Faults, warnings
 } eepromValue;
 
 
@@ -57,7 +60,7 @@ typedef enum
     , EEPROM_op_write       //!< A value is being written
     , EEPROM_op_validate    //!< A written value is being validated
     , EEPROM_op_idle        //!< All operations have been completed
-    , EEPROM_op_error       //!< An error occured
+    , EEPROM_op_fault       //!< An error occured.  EEPROM will not be used until car is restarted
 } eepromOperation;
 
 typedef struct _EEPROMManager
@@ -71,7 +74,7 @@ typedef struct _EEPROMManager
 EEPROMManager;
 
 //
-EEPROMManager* EEPROMManager_new(ubyte2 startAddress, ubyte2 size);  //Constructor
+EEPROMManager* EEPROMManager_new();  //Constructor
 
 
 /**********************************************************************//**
@@ -108,7 +111,7 @@ bool EEPROMManager_initialized(EEPROMManager* me);
 * @param[in]    parameter   Which value to be read from EEPROM cache
 * @param[out]   value       The value from EEPROM will be returned here
 * \retval Whether the value was successfully read or not (in the cache).
-* @{
+* \{
 */
 bool EEPROMManager_get_ubyte1(EEPROMManager* me, eepromValue parameter, ubyte1* value);
 bool EEPROMManager_get_ubyte2(EEPROMManager* me, eepromValue parameter, ubyte2* value);
@@ -118,7 +121,7 @@ bool EEPROMManager_get_sbyte2(EEPROMManager* me, eepromValue parameter, sbyte2* 
 bool EEPROMManager_get_sbyte4(EEPROMManager* me, eepromValue parameter, sbyte4* value);
 bool EEPROMManager_get_float4(EEPROMManager* me, eepromValue parameter, float4* value);
 bool EEPROMManager_get_bool(EEPROMManager* me, eepromValue parameter, bool* value);
-/** @} */
+/** \} */
 
 
 /** \defgroup Mutators Different function for each datatype to set a locally stored EEPROM value.

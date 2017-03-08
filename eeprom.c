@@ -20,10 +20,14 @@ LOCAL ? readInitialValues(?);
 */
 EEPROMManager* EEPROMManager_new()
 {
+    ubyte2 size = 34;  //bytes
+
     //Allocate memory for EEPROMManager object
     EEPROMManager* me = (EEPROMManager*)malloc(sizeof(struct _EEPROMManager));
 
     //Allocate memory for EEPROM data (2x)
+    me->data_actual = (ubyte1*)malloc(sizeof(ubyte1) * me->size);
+    me->data_desired = (ubyte1*)malloc(sizeof(ubyte1) * me->size);
 
     me->status = EEPROM_op_initialize;
 
@@ -34,14 +38,34 @@ EEPROMManager* EEPROMManager_new()
 }
 
 //---------------------------------------------------------------
-// Accessors / Mutators
+// Mutators
 //---------------------------------------------------------------
-/**  @ingroup FunctionGroup
+/**  @ingroup Mutators
+* @brief Specific description
+*/
+bool EEPROMManager_set_ubyte1(EEPROMManager* me, eepromValue parameter, ubyte1* value)
+{
+
+}
+
+//---------------------------------------------------------------
+// Accessors
+//---------------------------------------------------------------
+/**  @ingroup Accessors
 * @brief Specific description
 */
 bool EEPROMManager_get_ubyte1(EEPROMManager* me, eepromValue parameter, ubyte1* value)
 {
 
+}
+
+
+//---------------------------------------------------------------
+// Special Functions
+//---------------------------------------------------------------
+IO_ErrorType EEPROMManager_sync(EEPROMManager* me)
+{
+    //
 }
 
 
@@ -66,8 +90,21 @@ LOCAL bool getAddress(eepromValue value, ubyte2* address, ubyte1* bytes)
     return success;
 }
 
+//Reads EEPROM and stores data in data_actual.  Waits until read is complete.
+LOCAL ? readInitialValues(???)
+{
+    //Read eeprom
+    //Loop until status == ok
+    me->status = EEPROM_op_idle;
 
-LOCAL ? readInitialValues(?)
+}
+
+LOCAL read(? ? ? )
+{
+    IO_EEPROM_Read()
+}
+
+LOCAL write(? ? ? )
 {
 
 }
