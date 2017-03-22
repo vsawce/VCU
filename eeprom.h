@@ -24,6 +24,7 @@
 #define _EEPROM_H
 
 #include "IO_Driver.h"
+#include "IO_EEPROM.h"
 
 /*
  *  This enum provides a list of all the variables stored by EEPROM. This
@@ -103,6 +104,25 @@ eepromOperation EEPROMManager_getStatus(EEPROMManager* me);
 
 bool EEPROMManager_initialized(EEPROMManager* me);
 
+/**************************************************************
+ *
+ * @brief Reads or writes data to EEPROM in single byte
+ *
+ * @param[in]	offset	The index(location) of the EEPROM hex address
+ * @param[in]	length	The amount of indexes to read from or write over
+ * @param[out]	data 	The data from the EEPROM stored bytes
+ *
+ * \return IO_ErrorType
+ * \retval IO_E_OK                  everything fine / no changes needed
+ * \retval IO_E_BUSY                EEPROM module is still busy
+ * \retval IO_E_EEPROM_RANGE        invalid address offset or range
+ * \retval IO_E_NULL_POINTER        a null pointer has been passed
+ * \retval IO_E_CHANNEL_NOT_CONFIGURED the module is not initialized
+ *
+ **************************************************************/
+void readEP(ubyte2 offset, ubyte2 length, ubyte1 data);
+
+void writeEP(ubyte2 offset, ubyte2 length, ubyte1 * data);
 
 
 /** \defgroup Accessors Different function for each datatype to get a locally stored EEPROM value.
