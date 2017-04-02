@@ -1,11 +1,21 @@
-#include "IO_Driver.h"
-#include "IO_EEPROM.h"
 #include "eeprom.h"
 
-#define LOCAL static
+/***************************************************************
+ 
+ The static keyword allows for a value to be preserved in between 
+ invocations
+ 
+ "LOCAL is just the variable name"
+ -Rusty
 
+ ***************************************************************/
+
+#define LOCAL static 
+
+//! Prototypes used in constructor
+/*!< Functions partially defined in helper functions */
 LOCAL bool getAddress(eepromValue value, ubyte2* address, ubyte1* bytes);
-LOCAL ? readInitialValues(?);
+LOCAL void readInitialValues(ubyte1* data); 
 
 //---------------------------------------------------------------
 // Constructor
@@ -14,7 +24,7 @@ LOCAL ? readInitialValues(?);
 * @brief 
 *
 * @param[in]   value       Which EEPROM value we want the address/length of
-* @param[out]  address     The EEPROM address of the desired value
+* @param[out]  address     The EEPROM address of the desired (software) value
 * @param[out]  bytes       The length (number of bytes) of the value
 * @return      Whether or not the address/length were successfully found.
 */
@@ -26,8 +36,8 @@ EEPROMManager* EEPROMManager_new()
     EEPROMManager* me = (EEPROMManager*)malloc(sizeof(struct _EEPROMManager));
 
     //Allocate memory for EEPROM data (2x)
-    me->data_actual = (ubyte1*)malloc(sizeof(ubyte1) * me->size);
-    me->data_desired = (ubyte1*)malloc(sizeof(ubyte1) * me->size);
+    me->data_hardware = (ubyte1*)malloc(sizeof(ubyte1) * me->size);
+    me->data_software = (ubyte1*)malloc(sizeof(ubyte1) * me->size);
 
     me->status = EEPROM_op_initialize;
 
@@ -41,32 +51,42 @@ EEPROMManager* EEPROMManager_new()
 // Mutators
 //---------------------------------------------------------------
 /**  @ingroup Mutators
-* @brief Sets the desired EEPROM values
+* @brief Sets the desired (software) EEPROM values
 */
 bool EEPROMManager_set_ubyte1(EEPROMManager* me, eepromValue parameter, ubyte1* value)
 {
-    if(writeEP){
-        me -> value;
-    data_desired = *value;
-        return true;
+    //! Accessing the indexes of the dynamic array and deep copying values
+    ubyte2* address; /*!< Created for getAddress param */
+    if(getAddress(parameter, address, value)){ /*!< Checks if the address can be found */
+        if(writeEP){ /*!< Checks if the EEPROM has been written to */
+        for(int i = 0; i< me->size; i++){
+            value[i] = data_hardware[i]; /*!< Performs a deep copy */
+        }
+        return true; /*!< Mutation was successful */
     }
-    return false;
+    return false; /*!< Mutation failed */
+    }
 }
 
 //---------------------------------------------------------------
 // Accessors
 //---------------------------------------------------------------
 /**  @ingroup Accessors
-* @brief Gets the actual EEPROM values
+* @brief Gets the actual hardware EEPROM values
 */
 bool EEPROMManager_get_ubyte1(EEPROMManager* me, eepromValue parameter, ubyte1* value)
 {
-    if(readEP){
-        me -> value;
-        *value = *data_actual;
-        return true;
+    //! Accessing the indexes of the dynamic array and deep copying values
+    ubyte2* address; /*!< Created for getAddress param */
+    if(getAddress(parameter, address, value)){ /*!< Checks if the address can be found */
+        if(readEP){ /*!< Checks if the EEPROM has been read */
+        for(int i = 0; i< me->size; i++){
+            value[i] = data_hardware[i]; /*!< Performs a deep copy */
+        }
+        return true; /*!< Access was successful */
     }
-    return false;
+    return false; /*!< Access failed */
+    }
 }
 
 //---------------------------------------------------------------
@@ -74,11 +94,21 @@ bool EEPROMManager_get_ubyte1(EEPROMManager* me, eepromValue parameter, ubyte1* 
 //---------------------------------------------------------------
 IO_ErrorType EEPROMManager_sync(EEPROMManager* me)
 {
-    // if(data_actual!=data_desired){
-    //     data_actual = data_desired;
-    // }
+    do{
+        if(data_hardware!=data_software){ /*!< Checks if it is already equivalent */
+        *data_hardware = *data_software; /*!< Sets the hardware to the cache data */
+    }
+    }while(EEPROMManager_getStatus!=IO_E_OK);
 }
 
+eepromOperation EEPROMManager_getStatus(EEPROMManager* me){
+    //! Uses the EEPROM API to return value to eepromOperation status
+    me->status = IO_EEPROM_GetStatus();
+}
+
+bool EEPROMManager_initialized(EEPROMManager* me){
+    //left empty
+}
 
 //---------------------------------------------------------------
 // Helper functions (private)
@@ -87,7 +117,7 @@ IO_ErrorType EEPROMManager_sync(EEPROMManager* me)
  * @brief Returns the address and length of any variable in the eepromValue enum
  *
  * @param[in]   value       Which EEPROM value we want the address/length of
- * @param[out]  address     The EEPROM address of the desired value
+ * @param[out]  address     The EEPROM address of the desired (software) value
  * @param[out]  bytes       The length (number of bytes) of the value
  * @return      Whether or not the address/length were successfully found.
  */
@@ -101,51 +131,43 @@ LOCAL bool getAddress(eepromValue value, ubyte2* address, ubyte1* bytes)
     return success;
 }
 
-//Reads EEPROM and stores data in data_actual.  Waits until read is complete.
-LOCAL void readInitialValues(ubyte* data)  //might be void since we aren't modifying anything
+//Reads EEPROM and stores data in data_hardware.  Waits until read is complete.
+LOCAL void readInitialValues(ubyte1* data)  //might be void since we aren't modifying anything
 {
     //Read eeprom
     //Loop until status == ok
     do{
         me->status = EEPROM_op_idle;
     } while(EEPROMManager_getStatus!=IO_E_OK);
-    *data_actual = *data;
+    data_hardware = data; //shallow copy
 }
 
-// Writes to EEPROM
-LOCAL void writeEP(ubyte2 offset, ubyte2 length, ubyte1 * data){
-    //checks if the EEPROM is busy
+//! Writes to EEPROM
+bool writeEP(ubyte2 offset, ubyte2 length, ubyte1 * data){
+    //! Checks if the EEPROM is busy
 
     if(IO_EEPROM_GetStatus() == IO_E_OK){
 
-        //not busy starts reading
-
-        IO_EEPROM_Write(offset, length, data);
-
+        IO_EEPROM_Write(offset, length, data); /*!< Not busy starts writing. */
+        return true;
     }
-
-    //data is busy not available
-
-    //needs IO_EEPROM_GetStatus 
-
-    //to return IO_E_OK 
+    return false;
+    //! Data is busy not available.
+    /*!< It needs IO_EEPROM_GetStatus */
+    /*!< to return IO_E_OK. */ 
 }
 
-// Reads to EEPROM
-LOCAL void readEP(ubyte2 offset, ubyte2 length, ubyte1 data){
-    //checks if the EEPROM is busy
+//! Reads to EEPROM
+bool readEP(ubyte2 offset, ubyte2 length, ubyte1 data){
+    //! Checks if the EEPROM is busy
 
     if(IO_EEPROM_GetStatus() == IO_E_OK){
 
-        //not busy starts reading
-
-        IO_EEPROM_Read(offset, length, &data);
-
+        IO_EEPROM_Read(offset, length, &data); /*!< Not busy starts reading. */
+        return true;
     }
-
-    //data is busy not available
-
-    //needs IO_EEPROM_GetStatus 
-
-    //to return IO_E_OK 
+    return false;
+    //! Data is busy not available.
+    /*!< It needs IO_EEPROM_GetStatus */
+    /*!< to return IO_E_OK. */ 
 }
