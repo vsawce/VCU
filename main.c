@@ -311,8 +311,6 @@ void main(void)
         /*******************************************/
         /*              Enact Outputs              */
         /*******************************************/
-        //MOVE INTO SAFETYCHECKER
-        //SafetyChecker_setErrorLight(sc);
         Light_set(Light_dashError, (SafetyChecker_getFaults(sc) == 0) ? 0 : 1);
         //Handle motor controller startup procedures
         MCM_relayControl(mcm0, &Sensor_HVILTerminationSense);
