@@ -280,7 +280,6 @@ IO_ErrorType CanManager_send(CanManager* me, CanChannel channel, IO_CAN_DATA_FRA
         }
     } //end of loop for each message in outgoing messages
 
-    IO_UART_Task();
     //----------------------------------------------------------------------------
     // If there are messages to send
     //----------------------------------------------------------------------------
@@ -334,53 +333,38 @@ void CanManager_read(CanManager* me, CanChannel channel, MotorController* mcm, B
                     , (channel == CAN0_HIPRI ? me->can0_read_messageLimit : me->can1_read_messageLimit)
                     , &canMessageCount);
 
+
 	//Determine message type based on ID
 	for (int currMessage = 0; currMessage < canMessageCount; currMessage++)
 	{
-		switch (canMessages[currMessage].id)
+		//Note: divide by 10 - only first two hex chars used to determine originating system
+		switch (canMessages[currMessage].id / 10)
 		{
         //-------------------------------------------------------------------------
         //Motor controller
         //-------------------------------------------------------------------------
-        case 0xA0:
-        case 0xA1:
-        case 0xA2:
-        case 0xA3:
-        case 0xA4:
-        case 0xA5:
-        case 0xA6:
-        case 0xA7:
-        case 0xA8:
-        case 0xA9:
-		case 0xAA:
-		case 0xAB:
-        case 0xAC:
-        case 0xAD:
-        case 0xAE:
-        case 0xAF:
+        case 0x0A:
             MCM_parseCanMessage(mcm, &canMessages[currMessage]);
             break;
 
 		//-------------------------------------------------------------------------
 		//BMS
 		//-------------------------------------------------------------------------
-		case 0x620:
-		case 0x621:
-		case 0x622:
-		case 0x623:
-		case 0x624:
-		case 0x625:
-		case 0x626:
-        case 0x627:
-        case 0x628:
-        case 0x629:
+		case 0x62:
             BMS_parseCanMessage(bms, &canMessages[currMessage]);
+			break;
+			
+		//-------------------------------------------------------------------------
+		//DCU (tuning settings)
+		//-------------------------------------------------------------------------
+		case 0x80:
+            DCU_parseCanMessage(bms, &canMessages[currMessage]);
 			break;
 			
 		//-------------------------------------------------------------------------
 		//VCU Debug Control
 		//-------------------------------------------------------------------------
-		case 0x5FF:
+		case 0x5F: //Just need 0x5FF
 			SafetyChecker_parseCanMessage(sc, &canMessages[currMessage]);
             MCM_parseCanMessage(mcm, &canMessages[currMessage]);
 			break;
