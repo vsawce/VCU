@@ -1,3 +1,4 @@
+
 /**********************************************************************//**
  * @file eeprom.h
  *
@@ -46,7 +47,8 @@ typedef enum
     , EEPROM_val_regen_percentBPSForMaxRegen
     , EEPROM_val_regen_minimumSpeedKPH
     , EEPROM_val_regen_SpeedRampStart
-
+    //, EEPROM_val_regen_throttlePedal
+    
     //! Faults and warnings can be found in the second enum
     //, EEPROM_val_faults
     //, EEPROM_val_warnings
@@ -65,6 +67,20 @@ typedef enum
     , EEPROM_op_idle        //!< All operations have been completed
     , EEPROM_op_fault       //!< An error occured.  EEPROM will not be used until car is restarted
 } eepromOperation;
+
+/*
+*   @brief  the stages for performing a big endian shift on the 
+*           set_ubyte and get_byte helper functions
+*
+*   @parameter
+*   @retval
+*/
+typedef enum _EEPROM_shifter{
+    byte1
+    , byte2
+    , byte4
+    , byte8
+} EEPROM_shifter;
 
 typedef struct _EEPROMManager /*!< struct identifier */
 {
@@ -115,9 +131,9 @@ bool EEPROMManager_initialized(EEPROMManager* me);
  *
  *      They can be called multiple times per iteration. 
  *
- * @param[in]	offset	The index(location) of the EEPROM hex address
- * @param[in]	length	The amount of indexes to read from or write over
- * @param[out]	data 	The data from the EEPROM stored bytes
+ * @param[in]   offset  The index(location) of the EEPROM hex address
+ * @param[in]   length  The amount of indexes to read from or write over
+ * @param[out]  data    The data from the EEPROM stored bytes
  *
  * \return IO_ErrorType
  * \retval IO_E_OK                  everything fine / no changes needed
@@ -140,6 +156,7 @@ bool writeEP(ubyte2 offset, ubyte2 length, ubyte1 * data);
 * @param[in]    parameter   Which value to be read from EEPROM cache
 * @param[out]   value       The value from EEPROM will be returned here
 * \retval Whether the value was successfully read or not (in the cache).
+* \retval The size of the data (1 byte, 2 byte, 4 byte, or 8 byte->should be no larger).
 * \{
 */
 bool EEPROMManager_get_ubyte1(EEPROMManager* me, eepromValue parameter, ubyte1* value);
@@ -159,6 +176,7 @@ bool EEPROMManager_get_bool(EEPROMManager* me, eepromValue parameter, bool* valu
 * @param[in]    parameter   Which variable to be edited in EEPROM cache
 * @param[in]    value       What to change the variable to
 * \retval Whether the value was successfully changed or not (in the cache).
+* \retval The size of the data (1 byte, 2 byte, 4 byte, or 8 byte->should be no larger).
 * @{
 */
 bool EEPROMManager_set_ubyte1(EEPROMManager* me, eepromValue parameter, ubyte1 value);
