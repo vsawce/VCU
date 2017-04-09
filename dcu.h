@@ -15,7 +15,7 @@ typedef struct _DashControlUnit DashControlUnit;
 *
 * @return      dcu object
 */
-DashControlUnit* DCU_new(void);
+DashControlUnit* DCU_new(ubyte2 canMessageBaseID);
 
 
 /**
