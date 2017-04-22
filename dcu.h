@@ -19,12 +19,13 @@ DashControlUnit* DCU_new(ubyte2 canMessageBaseID);
 
 
 /**
-* @brief Handles the data in a CAN message from the DCU
+* @brief Stores data received from the DCU CAN message into our DCU object
 *
 * @param[in]   me	       Pointer to the dcu object
 * @param[in]   canMessage  The message to be parsed
 */
 void DCU_parseCanMessage(DashControlUnit* me, IO_CAN_DATA_FRAME* canMessage);
+
 
 
 

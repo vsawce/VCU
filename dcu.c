@@ -22,10 +22,11 @@ struct _DashControlUnit
 	sbyte2	torqueMaximumDNm;
 	ubyte2	regen_torqueLimitDNm;
 	ubyte2	regen_torqueAtZeroPedalDNm;
-	float4	regen_percentAPPSForCoasting;
+	float4	regen_percentAPPSForCoasting;	
 	float4	regen_percentBPSForMaxRegen;
 	ubyte2	regen_minimumSpeedKPH;
 	ubyte2	regen_speedRampStart;
+	sbyte1	cooling_airTempOverride;
 	//...more variables TBD
 
 
