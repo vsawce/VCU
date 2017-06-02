@@ -40,7 +40,6 @@ typedef enum
     , EEPROM_val_TPS0_calibMax = 0x0006  //!< ubyte2 0x0006
     , EEPROM_val_TPS1_calibMin = 0x0008  //!< ubyte2 0x0008
     , EEPROM_val_TPS1_calibMax = 0x000A  //!< ubyte2 0x000A
-
     , EEPROM_val_MCM_torqueMaximumDNm = 0x000C //!< sbyte2 0x000C
     , EEPROM_val_regen_torqueLimitDNm = 0x000E  //!< ubyte2 0x000E
     , EEPROM_val_regen_torqueAtZeroPedalDNm = 0x0010 //!< ubyte2 0x0010
@@ -49,7 +48,6 @@ typedef enum
     , EEPROM_val_regen_minimumSpeedKPH = 0x001C //!< ubyte2 0x001C
     , EEPROM_val_regen_SpeedRampStart = 0x001E //!< ubyte2 0x001E
     , EEPROM_val_regen_throttlePedal = 0x0020 //!< ubyte2 0x0020
-    
     //! Faults and warnings can be found in the eepromOperation
     //, EEPROM_val_faults
     //, EEPROM_val_warnings
@@ -84,7 +82,7 @@ typedef enum _EEPROM_endianShift{
     isByte1 //= sizeof(ubyte1)
     , isByte2 //= sizeof(ubyte2)
     , isByte4 //= sizeof(ubyte4)
-    , isByte8 //= sizeof(bool)
+    , isByte8 //= the unknown or initalized to
 } eepromLength;
 
 /*
@@ -100,7 +98,6 @@ typedef struct _EEPROMManager /*!< struct identifier */
     ubyte2 size;            //!< Size of EEPROM actually used by our software
     ubyte1* data_software;   //!< "Desired" EEPROM values.  Pointer to array of bytes.
     ubyte1* data_hardware;    //!< "Actual" (confirmed) EEPROM values.  Pointer to array of bytes.
-    // eepromValue type;       //!< Gives developers easy way to request a specific value
     eepromOperation status; //!< The current operation being performed by EEPROM
     eepromLength length;    //!< Describes the amount of bytes in a value
 }EEPROMManager;
@@ -145,12 +142,9 @@ bool EEPROMManager_initialized(EEPROMManager* me);
  *
  *      They can be called multiple times per iteration. 
  *
- * @param       me      Pointer to EEPROMManager
- * @param       shift   Pointer to EEPROM_endianShift
  * @param[in]   offset  The index(location) of the EEPROM hex address
  * @param[in]   length  The amount of indexes to read from or write over
- * @param[out]  data    The data from the EEPROM stored bytes
- * @param[out]  value   The data set that carries the size of the mutator/accessor parameters
+ * @param[out]      me      Pointer to EEPROMManager object
  *
  * \return IO_ErrorType
  * \retval IO_E_OK                  everything fine / no changes needed
@@ -218,50 +212,5 @@ bool EEPROMManager_get_bool(EEPROMManager* me, eepromValue parameter, bool* valu
 bool eepromLength_shift1(EEPROMManager* me, eepromValue parameter, ubyte1 value);
 bool eepromLength_shift2(EEPROMManager* me, eepromValue parameter, ubyte2 value);
 bool eepromLength_shift4(EEPROMManager* me, eepromValue parameter, ubyte4 value);
-
-// /** \defgroup Accessors that return specific EEPROM values (calibrations, faults, etc)
-// * \brief Edits a value in the locally cached copy of EEPROM.
-// * @param[in]    me          Pointer to the EEPROMManager
-// * @param[in]    parameter   Which variable to be edited in EEPROM cache
-// * @param[in]    value       What to change the variable to
-// * \retval Whether the value was successfully changed or not (in the cache).
-// * \retval The size of the data (1 byte, 2 byte, 4 byte, or 8 byte->should be no larger).
-// * @{
-//  */
-// ubyte4 get_EEPROM_val_doNotUse(EEPROMManager* me, eepromValue parameter, ubyte4 value);         //!< ubyte4 0x0000
-// ubyte2 get_EEPROM_val_TPS0_calibMin(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x0004
-// ubyte2 get_EEPROM_val_TPS0_calibMax(EEPROMManager* me, eepromValue parameter, ubyte2 value); //!< ubyte2 0x0006
-// ubyte2 get_EEPROM_val_TPS1_calibMin(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x0008
-// ubyte2 get_EEPROM_val_TPS1_calibMax(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x000A
-// sbyte2 get_EEPROM_val_MCM_torqueMaximumDNm(EEPROMManager* me, eepromValue parameter, sbyte2 value);  //!< sbyte2 0x000C
-// ubyte2 get_EEPROM_val_regen_torqueLimitDNm(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x000E
-// ubyte2 get_EEPROM_val_regen_torqueAtZeroPedalDNm(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x0010
-// float4 get_EEPROM_val_regen_percentAPPSForCoasting(EEPROMManager* me, eepromValue parameter, float4 value); //!< float4 0x0014
-// float4 get_EEPROM_val_regen_percentBPSForMaxRegen(EEPROMManager* me, eepromValue parameter, float4 value); //!< float4 0x0018
-// ubyte2 get_EEPROM_val_regen_minimumSpeedKPH(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x001C
-// ubyte2 get_EEPROM_val_regen_SpeedRampStart(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x001E
-// ubyte2 get_EEPROM_val_regen_throttlePedal(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x0020
-
-// * \defgroup Mutators Different function that sets specific EEPROM values (calibrations, faults, etc)
-// * \brief Edits a value in the locally cached copy of EEPROM.
-// * @param[in]    me          Pointer to the EEPROMManager
-// * @param[in]    parameter   Which variable to be edited in EEPROM cache
-// * @param[in]    value       What to change the variable to
-// * \retval Whether the value was successfully changed or not (in the cache).
-// * \retval The size of the data (1 byte, 2 byte, 4 byte, or 8 byte->should be no larger).
-// * @{
-// ubyte4 set_EEPROM_val_doNotUse(EEPROMManager* me, eepromValue parameter, ubyte4 value);         //!< ubyte4 0x0000
-// ubyte2 set_EEPROM_val_TPS0_calibMin(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x0004
-// ubyte2 set_EEPROM_val_TPS0_calibMax(EEPROMManager* me, eepromValue parameter, ubyte2 value); //!< ubyte2 0x0006
-// ubyte2 set_EEPROM_val_TPS1_calibMin(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x0008
-// ubyte2 set_EEPROM_val_TPS1_calibMax(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x000A
-// sbyte2 set_EEPROM_val_MCM_torqueMaximumDNm(EEPROMManager* me, eepromValue parameter, sbyte2 value);  //!< sbyte2 0x000C
-// ubyte2 set_EEPROM_val_regen_torqueLimitDNm(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x000E
-// ubyte2 set_EEPROM_val_regen_torqueAtZeroPedalDNm(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x0010
-// float4 set_EEPROM_val_regen_percentAPPSForCoasting(EEPROMManager* me, eepromValue parameter, float4 value); //!< float4 0x0014
-// float4 set_EEPROM_val_regen_percentBPSForMaxRegen(EEPROMManager* me, eepromValue parameter, float4 value); //!< float4 0x0018
-// ubyte2 set_EEPROM_val_regen_minimumSpeedKPH(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x001C
-// ubyte2 set_EEPROM_val_regen_SpeedRampStart(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x001E
-// ubyte2 set_EEPROM_val_regen_throttlePedal(EEPROMManager* me, eepromValue parameter, ubyte2 value);  //!< ubyte2 0x0020
 
 #endif
