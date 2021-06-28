@@ -302,7 +302,7 @@ void MCM_relayControl(MotorController* me, Sensor* HVILTermSense)
         {
             //Okay to turn MCM off once 0 torque is commanded, or after 2 sec
             //TODO: SIMILAR CODE SHOULD BE EMPLOYED AT HVIL SHUTDOWN CONTROL PIN
-            if (me->commandedTorque == 0 || IO_RTC_GetTimeUS(me->timeStamp_HVILLost) > 2000000)  //EXTRA 0
+            if (me->commandedTorque == 0 || IO_RTC_GetTimeUS(me->timeStamp_HVILLost) > 2000000)
             {
                 IO_DO_Set(IO_DO_00, FALSE);  //Need MCM relay object
                 me->relayState = FALSE;
@@ -392,7 +392,7 @@ void MCM_inverterControl(MotorController* me, TorqueEncoder* tps, BrakePressureS
         {
             RTDPercent = 1; //Doesn't matter if button is no longer pressed - RTD light should be on if car is driveable
             SerialManager_send(me->serialMan, "Inverter has been enabled.  Starting RTDS.  Car is ready to drive.\n");
-            RTDS_setVolume(rtds, .1, 1500000);
+            RTDS_setVolume(rtds, 1.0, 1500000);
             MCM_setStartupStage(me, 4); //MCM_getStartupStage(me) + 1);  //leave this stage since we've already kicked off the RTDS
         }
         break;
