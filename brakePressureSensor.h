@@ -33,6 +33,7 @@ typedef struct _BrakePressureSensor
 
     bool calibrated;
     float4 percent;
+    bool brakesAreOn;
     bool implausibility;
 } BrakePressureSensor;
 

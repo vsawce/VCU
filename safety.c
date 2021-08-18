@@ -39,7 +39,7 @@ static const ubyte4 F_tpsbpsImplausible = 0x400;
 //static const ubyte4 UNUSED = 0x800;
 
 //nibble 4
-//static const ubyte4 F_ = 0x1000;
+static const ubyte4 F_softBSPDFault = 0x1000;
 //static const ubyte4 F_ = 0x2000;
 //static const ubyte4 F_ = 0x4000;
 //static const ubyte4 F_ = 0x8000;
@@ -67,6 +67,8 @@ static const ubyte2 N_HVILTermSenseLost = 1;
 static const ubyte2 N_Over75kW_BMS = 0x10;
 static const ubyte2 N_Over75kW_MCM = 0x20;
 
+ubyte4 timestamp_SoftBSPD = 0;
+
 /*****************************************************************************
 * SafetyChecker object
 ******************************************************************************
@@ -84,7 +86,9 @@ struct _SafetyChecker
     ubyte1 maxAmpsCharge;
     ubyte1 maxAmpsDischarge;
 
-    bool tpsbpsImplausible;
+    bool softBSPD_bpsHigh;
+    bool softBSPD_kwHigh;
+    bool softBSPD_fault;
 
     bool bypass;
     ubyte4 timestamp_bypassSafetyChecks;
@@ -105,10 +109,12 @@ SafetyChecker *SafetyChecker_new(SerialManager *sm, ubyte2 maxChargeAmps, ubyte2
     me->faults = 0;
     me->warnings = 0;
 
-    me->tpsbpsImplausible = TRUE;
-
     me->maxAmpsCharge = maxChargeAmps;
     me->maxAmpsDischarge = maxDischargeAmps;
+
+    me->softBSPD_bpsHigh = TRUE;
+    me->softBSPD_kwHigh = TRUE;
+    me->softBSPD_fault = TRUE;
 
     me->bypass = FALSE;
     me->timestamp_bypassSafetyChecks = 0;
@@ -254,17 +260,8 @@ void SafetyChecker_update(SafetyChecker *me, MotorController *mcm, BatteryManage
     TorqueEncoder_getIndividualSensorPercent(tps, 0, &tps0Percent); //borrow the pedal percent variable
     TorqueEncoder_getIndividualSensorPercent(tps, 1, &tps1Percent);
 
-    //sprintf(message, "TPS0: %f\n", tps0Percent);
-    //SerialManager_send(me->serialMan, message);
-    //sprintf(message, "TPS1: %f\n", tps1Percent);
-    //SerialManager_send(me->serialMan, message);
-
     if ((tps1Percent - tps0Percent) > .1 || (tps1Percent - tps0Percent) < -.1) //Note: Individual TPS readings don't go negative, otherwise this wouldn't work
     {
-
-        //Err.Report(Err.Codes.TPSDiscrepancy, "TPS discrepancy of over 10%", Motor.Stop);
-        SerialManager_send(me->serialMan, "TPS discrepancy of over 10%\n");
-
         me->faults |= F_tpsOutOfSync;
     }
     else
@@ -276,58 +273,30 @@ void SafetyChecker_update(SafetyChecker *me, MotorController *mcm, BatteryManage
     me->faults &= ~F_bpsOutOfSync;
 
     //===================================================================
-    //Torque Encoder <-> Brake Pedal Plausibility Check
+    // 2021 EV.5.7 APPS / Brake Pedal Plausibility Check
     //===================================================================
-    // EV2.5 Torque Encoder / Brake Pedal Plausibility Check
-    //  The power to the motors must be immediately shut down completely, if the mechanical brakes
-    //  are actuated and the torque encoder signals more than 25 % pedal travel at the same time.
-    //  This must be demonstrated when the motor controllers are under load.
-    // EV2.5.1 The motor power shut down must remain active until the torque encoder signals less than 5 % pedal travel,
-    //  no matter whether the brakes are still actuated or not.
+    // EV.5.7.1 The power to the Motor(s) must be immediately and completely shut down when both of the following exist at the same time:
+    //     • The mechanical brakes are actuated
+    //     • The APPS signals more than 25% pedal travel
+    //     This must be demonstrated at Technical Inspection
+    // EV.5.7.2 The Motor shut down must remain active until the APPS signals less than 5% pedal travel, with or without brake operation.
     //-------------------------------------------------------------------
-    //Implausibility if..
-    //float4 twelve = 12.0;
-    //SerialManager_sprintf(me->serialMan, "The number twelve: %d\n", &twelve);
-    bool tpsHigh = FALSE;
-    bool bpsHigh = FALSE;
-    if (bps->percent > .05)
-    {
-        bpsHigh = TRUE;
-    }
-    else
-    {
-        bpsHigh = FALSE;
-    }
+    bool tpsAbove25Percent = (tps->travelPercent > .25);
 
-    if (tps->percent > .25)
+    //If mechanical brakes actuated && tps > 25%
+    if (bps->brakesAreOn && tpsAbove25Percent)
     {
-        tpsHigh = TRUE;
-    }
-    else
-    {
-        tpsHigh = FALSE;
-    }
-
-    //if (bps->percent > .05 && tps->percent > .25)
-    if (tpsHigh == TRUE && bpsHigh == TRUE)
-    {
-        //If mechanical brakes actuated && tps > 25%
-
+        // Set the TPS/BPS implaisibility VCU fault
         me->faults |= F_tpsbpsImplausible;
-        me->tpsbpsImplausible = TRUE;
         SerialManager_send(me->serialMan, "TPS BPS implausiblity detected.\n");
-        //From here, assume that motor controller will check for implausibility before accepting commands
     }
-    //Clear implausibility if...
-    //if ((me->faults & F_tpsbpsImplausible) > 0)
-    //{
-    if (tps->percent < .10) //TPS is reduced to < 5%
+    else if (tps->travelPercent < .05) //TPS is reduced to < 5%
     {
-        //me->tpsbpsImplausible = FALSE;
-        //SerialManager_send(me->serialMan, "TPS below .05.  No implausibility.\n");
+        // There is no implausibility if TPS is below 5%
         me->faults &= ~(F_tpsbpsImplausible); //turn off the implausibility flag
     }
-    //}
+
+    
 
     SerialManager_send(me->serialMan, "\n");
 
@@ -359,6 +328,46 @@ void SafetyChecker_update(SafetyChecker *me, MotorController *mcm, BatteryManage
         me->warnings &= ~W_lvsBatteryLow;
         //sprintf(message, "LVS battery %.03fV good.\n", (float4)LVBattery->sensorValue / 1000);
     }
+
+    
+    //===================================================================
+    // softBSPD - Software implementation of Brake System Plausibility Device
+    //===================================================================
+    // Danny (e-tech judge) suggested implementing a BSPD check in software as
+    // an alternative to making a hardware adjustment to the BSPD requiring us to re-tech.
+    // By tripping a software BSPD slightly before the actual BSPD would trip, we can avoid
+    // the BSPD actually shutting down the car and ending our run.
+    // 2021 BSPD looks for 2.75V from BPS
+    // and ?? kW (approximation from a current sensor assuming nominal pack voltage)
+    // We will use 2.0V (TBD) BPS voltage and even the tiniest amount of torque command
+    
+    // Formula for relating kW to Nm:
+    //(kW) = torque (Nm) x speed (RPM) / 9.5488
+    
+    // MCM readings <--> REQUESTED torque * rpm / 9.5488
+    // 259*158 = 225 * 2556 / 9.5488
+    // 40922 = 60227 <-- This discrepancy is because we don't get all of the requested torque 
+
+
+    me->softBSPD_bpsHigh = bps->bps0->sensorValue > 2.5;
+    me->softBSPD_kwHigh = MCM_getPower(mcm) > 4000;
+
+    // Note: this is using the FUTURE torque request with the PREVIOUS RPM
+    if (me->softBSPD_bpsHigh && me->softBSPD_kwHigh)
+    {
+        IO_RTC_StartTime(&timestamp_SoftBSPD);
+        me->softBSPD_fault = TRUE;
+        me->faults |= F_softBSPDFault;
+        Light_set(Light_dashEco, 1);  // For testing only
+    }
+    else if (IO_RTC_GetTimeUS(timestamp_SoftBSPD) >= 500000 || IO_RTC_GetTimeUS(timestamp_SoftBSPD) == 0)
+    {
+        timestamp_SoftBSPD = 0;
+        me->softBSPD_fault = FALSE;
+        me->faults &= ~F_softBSPDFault;
+        Light_set(Light_dashEco, 0);  // For testing only
+    }
+
 
     //===================================================================
     // Safety checker bypass
@@ -463,16 +472,20 @@ void SafetyChecker_reduceTorque(SafetyChecker *me, MotorController *mcm, Battery
     {
         multiplier = 0;
     }
-    //////////if ((me->notices & N_HVILTermSenseLost) > 0) // HVIL is low (must command 0 torque before opening MCM relay
-    //////////{
-    //////////    multiplier = 0;
-    //////////    SerialManager_send(me->serialMan, "SC.0: HVIL term sense low\n");
-    //////////}
-    ////////if (MCM_commands_getTorque(mcm) < 0 && groundSpeedKPH < 5)  //No regen below 5kph
-    ////////{
-    ////////    SerialManager_send(me->serialMan, "SC.0: Regen < 5kph\n");
-    ////////    multiplier = 0;
-    ////////}
+    
+    // If HVIL is open, we must command 0 torque before opening the motor controller relay
+    if ((me->notices & N_HVILTermSenseLost) > 0)
+    {
+       multiplier = 0;
+       SerialManager_send(me->serialMan, "HVIL term sense low\n");
+    }
+
+    // //No regen below 5kph
+    // if (MCM_commands_getTorque(mcm) < 0 && groundSpeedKPH < 5)
+    // {
+    //    SerialManager_send(me->serialMan, "Regen < 5kph\n");
+    //    multiplier = 0;
+    // }
     //-------------------------------------------------------------------
     // Other limits (% reduction) - set torque to the lowest of all these
     // IMPORTANT: Be aware of direction-sensitive situations (accel/regen)
