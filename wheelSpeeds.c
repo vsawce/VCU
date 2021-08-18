@@ -88,6 +88,51 @@ float4 WheelSpeeds_getWheelSpeed(WheelSpeeds *me, Wheel corner)
     return speed;
 }
 
+float4 WheelSpeeds_getWheelSpeedRPM(WheelSpeeds *me, Wheel corner, bool interpolate)
+{
+    float4 speed;
+    if (interpolate) {
+        switch (corner)
+        {
+            case FL:
+                speed = Sensor_WSS_FL.heldSensorValue;
+                break;
+            case FR:
+                speed = Sensor_WSS_FR.heldSensorValue;
+                break;
+            case RL:
+                speed = Sensor_WSS_RL.heldSensorValue;
+                break;
+            case RR:
+                speed = Sensor_WSS_RR.heldSensorValue;
+                break;
+            default:
+                speed = 0;
+        }
+    }
+    else {
+        switch (corner)
+        {
+            case FL:
+                speed = me->speed_FL;
+                break;
+            case FR:
+                speed = me->speed_FR;
+                break;
+            case RL:
+                speed = me->speed_RL;
+                break;
+            case RR:
+                speed = me->speed_RR;
+                break;
+            default:
+                speed = 0;
+        }
+    }
+
+    return speed*60.0;
+}
+
 float4 WheelSpeeds_getSlowestFront(WheelSpeeds *me)
 {
     return (me->speed_FL < me->speed_FR) ? me->speed_FL : me->speed_FR;

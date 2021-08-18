@@ -50,31 +50,20 @@ BrakePressureSensor *BrakePressureSensor_new(void)
  void BrakePressureSensor_update(BrakePressureSensor *me, bool bench)
 {
     me->bps0_value = me->bps0->sensorValue;
-<<<<<<< HEAD
-
-    me->percent = 0;
-=======
->>>>>>> upstream/sre5-updates
 
     //This function runs before the calibration cycle function.  If calibration is currently
     //running, then set the percentage to zero for safety purposes.
     if (me->runCalibration == TRUE || me->calibrated == FALSE)
     {
         me->bps0_percent = 0;
-<<<<<<< HEAD
-=======
         me->percent = 0;
         me->brakesAreOn = FALSE;  // Blocks Ready To Drive
->>>>>>> upstream/sre5-updates
     }
     else
     {
         me->bps0_percent = getPercent(me->bps0_value, me->bps0_calibMin, me->bps0_calibMax, TRUE);
         me->percent = me->bps0_percent;  // Note: If we had redundant sensors we would average them here
-<<<<<<< HEAD
-=======
         me->brakesAreOn = me->percent > BRAKES_ON_PERCENT;
->>>>>>> upstream/sre5-updates
     }
 
     // Turn brake light on or off

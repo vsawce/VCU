@@ -108,10 +108,19 @@ void vcu_initializeADC(bool benchMode)
     //MOVED TO TPS/BPS BLOCK ABOVE
 
     //Wheel Speed Sensors (Pulse Width Detection)
-    Sensor_WSS_FL.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_06, IO_PWD_FALLING_VAR); //Is there a reason to look for rising vs falling edge?
-    Sensor_WSS_FR.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_04, IO_PWD_FALLING_VAR); //Is there a reason to look for rising vs falling edge?
-    Sensor_WSS_RL.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_05, IO_PWD_FALLING_VAR); //Is there a reason to look for rising vs falling edge?
-    Sensor_WSS_RR.ioErr_signalInit = IO_PWD_FreqInit(IO_PWD_07, IO_PWD_FALLING_VAR); //Is there a reason to look for rising vs falling edge?
+
+    IO_RTC_StartTime(&Sensor_WSS_FL.timestamp);
+    IO_RTC_StartTime(&Sensor_WSS_FR.timestamp);
+    IO_RTC_StartTime(&Sensor_WSS_RL.timestamp);
+    IO_RTC_StartTime(&Sensor_WSS_RR.timestamp);
+
+    Sensor_WSS_FL.heldSensorValue = Sensor_WSS_FR.heldSensorValue = Sensor_WSS_RL.heldSensorValue = Sensor_WSS_RR.heldSensorValue = 0;
+
+    Sensor_WSS_FL.ioErr_signalInit = IO_PWD_ComplexInit(IO_PWD_10, IO_PWD_LOW_TIME, IO_PWD_FALLING_VAR, IO_PWD_RESOLUTION_0_8, 4, IO_PWD_THRESH_1_25V, NULL, NULL); //Is there a reason to look for rising vs falling edge?
+    Sensor_WSS_FR.ioErr_signalInit = IO_PWD_ComplexInit(IO_PWD_08, IO_PWD_LOW_TIME, IO_PWD_FALLING_VAR, IO_PWD_RESOLUTION_0_8, 4, IO_PWD_THRESH_1_25V, NULL, NULL); //Is there a reason to look for rising vs falling edge?
+    Sensor_WSS_RL.ioErr_signalInit = IO_PWD_ComplexInit(IO_PWD_09, IO_PWD_LOW_TIME, IO_PWD_FALLING_VAR, IO_PWD_RESOLUTION_0_8, 4, IO_PWD_THRESH_1_25V, NULL, NULL); //Is there a reason to look for rising vs falling edge?
+    Sensor_WSS_RR.ioErr_signalInit = IO_PWD_ComplexInit(IO_PWD_11, IO_PWD_LOW_TIME, IO_PWD_FALLING_VAR, IO_PWD_RESOLUTION_0_8, 4, IO_PWD_THRESH_1_25V, NULL, NULL); //Is there a reason to look for rising vs falling edge?
+    //Maybe look for falling edge because we're using NPN/sinking WSS? 
 
     //----------------------------------------------------------------------------
     //Switches
