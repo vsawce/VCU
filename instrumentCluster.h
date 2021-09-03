@@ -6,6 +6,7 @@
 #include "IO_CAN.h"
 #include "IO_Driver.h"
 #include "serial.h"
+#include "tractionControl.h"
 
 //#include "canManager.h"
 
@@ -33,6 +34,5 @@ void IC_parseCanMessage(InstrumentCluster* me, IO_CAN_DATA_FRAME* icCanMessage);
 //----------------------------------------------------------------------------
 
 ubyte1 IC_getTorqueMapMode(InstrumentCluster *me);
-ubyte1 IC_getLaunchControlSensitivity(InstrumentCluster *me);
 
 #endif // _INSTRUMENTCLUSTER_H
