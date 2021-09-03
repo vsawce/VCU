@@ -10,6 +10,7 @@
 #include "bms.h"
 #include "wheelSpeeds.h"
 #include "safety.h"
+#include "tractionControl.h"
 //#include "sensorCalculations.h"
 
 typedef enum
