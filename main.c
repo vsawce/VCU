@@ -39,6 +39,7 @@
 #include "canManager.h"
 #include "motorController.h"
 #include "instrumentCluster.h"
+#include "tractionControl.h"
 #include "readyToDriveSound.h"
 #include "torqueEncoder.h"
 #include "brakePressureSensor.h"
@@ -211,6 +212,12 @@ void main(void)
     CoolingSystem *cs = CoolingSystem_new(serialMan);
 
     //----------------------------------------------------------------------------
+    // Non-object initializations
+    //----------------------------------------------------------------------------
+    launchControl_init();
+
+
+    //----------------------------------------------------------------------------
     // TODO: Additional Initial Power-up functions
     // //----------------------------------------------------------------------------
     // ubyte2 tps0_calibMin = 0xABCD;  //me->tps0->sensorValue;
@@ -331,6 +338,11 @@ void main(void)
         MCM_calculateCommands(mcm0, tps, bps);
 
         SafetyChecker_update(sc, mcm0, bms, tps, bps, &Sensor_HVILTerminationSense, &Sensor_LVBattery);
+
+        /*******************************************/
+        /*   Torque Limit Manipulation (LCS/TCS)   */
+        /*******************************************/
+        
 
         /*******************************************/
         /*  Output Adjustments by Safety Checker   */
