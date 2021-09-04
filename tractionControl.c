@@ -35,7 +35,7 @@ void launchControl_setAggressiveness(ubyte1 agr)
     launchControlAggressiveness = agr;
 }
 
-void launchControl_updateTorqueLimit(WheelSpeeds *wss_obj)
+void launchControl_updateTorqueLimit(MotorController* mcm_obj, WheelSpeeds *wss_obj)
 {
     // FR WSS is broke rn
     //ubyte4 averageWheelSpeed_front = (ubyte4) (((WheelSpeeds_getWheelSpeedRPM(wss_obj, FL, TRUE) + 0.5)
@@ -53,5 +53,7 @@ void launchControl_updateTorqueLimit(WheelSpeeds *wss_obj)
     {
         //WIP
         //Do limiting based on aggressiveness value
+        sbyte2 aggressivenessCalculation = TORQUELIMIT_DEFAULT;
+        MCM_commands_setTorqueLimit(mcm_obj, aggressivenessCalculation);
     }
 }
